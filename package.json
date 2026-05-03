@@ -1,7 +1,7 @@
 {
   "name": "@gemone/code-standards",
   "version": "0.1.0",
-  "description": "Coding standard library and syntax reference for Claude Code",
+  "description": "Coding standard library and syntax reference for Claude Code and OpenCode",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -31,5 +31,5 @@
     "node": ">=20.0.0"
   },
   "license": "MIT",
-  "repository": "https://github.com/gemone/code-wrtier"
+  "repository": "https://github.com/gemone/code-writer"
 }

@@ -1,5 +1,14 @@
 # Code Standards Plugin
 
+Works with both **Claude Code** and **OpenCode** via standard MCP protocol.
+
+## Platform Setup
+
+| Platform | Config | Commands |
+|----------|--------|----------|
+| Claude Code | `.mcp.json` + `.claude/settings.json` | `/lookup`, `/code`, `/review-style`, `/explain-pattern`, `/new-lang` |
+| OpenCode | `opencode.json` + `.opencode/` | `/lookup`, `/code`, `/review-style`, `/explain-pattern`, `/new-lang` |
+
 ## Available Tools
 
 | Tool | Description |
@@ -52,12 +61,15 @@ data/
 ├── index.yaml        # Language registry
 ├── typescript/       # TypeScript-specific data
 └── python/           # Python-specific data
-skills/               # Skill definitions
-├── code/             # Full code workflow pipeline
+skills/               # Claude Code skill definitions
+├── code/
 ├── lookup/
 ├── review-style/
 ├── explain-pattern/
 └── new-lang/
+.opencode/            # OpenCode plugin + commands
+├── plugins/
+└── commands/
 ```
 
 <!-- code-standards: project-languages -->
