@@ -21,10 +21,16 @@ const VIOLATIONS: Record<string, { pattern: RegExp; message: string; severity: s
   typescript: [
     { pattern: /\bvar\s+/, message: 'Use `const` or `let` instead of `var`.', severity: 'error' },
     { pattern: /:\s*any\b/, message: 'Avoid `any` type. Use `unknown` and narrow with type guards.', severity: 'warn' },
+    { pattern: /==\s|[^=!]==[^=]/, message: 'Use `===` and `!==` instead of `==` and `!=`.', severity: 'warn' },
+    { pattern: /console\.log\(/, message: 'Remove `console.log` in production code.', severity: 'info' },
   ],
   python: [
     { pattern: /import\s+os\.path/, message: 'Prefer `pathlib.Path` over `os.path`.', severity: 'warn' },
     { pattern: /\.format\(/, message: 'Prefer f-strings over `.format()`.', severity: 'info' },
+    { pattern: /^\s*except\s*:/m, message: 'Bare `except:` is prohibited. Catch specific exceptions.', severity: 'error' },
+    { pattern: /except\s+Exception\s*:/, message: 'Prefer specific exceptions over broad `except Exception`.', severity: 'warn' },
+    { pattern: /open\([^)]+\)(?!\s*as)/, message: 'Use `with open(...)` context manager for file operations.', severity: 'error' },
+    { pattern: /from\s+\w+\s+import\s+\*/, message: 'Avoid wildcard imports. Import specific names.', severity: 'warn' },
   ],
 };
 

@@ -11,9 +11,10 @@ const EXT_TO_LANG: Record<string, string> = {
 
 const MODULE_ALIASES: Record<string, Record<string, string>> = {
   typescript: {
-    'node:fs': 'fs', 'node:path': 'path', 'node:os': 'os',
+    'node:fs': 'node:fs/promises', 'node:fs/promises': 'node:fs/promises',
+    'node:path': 'node:path', 'node:os': 'os',
     'node:crypto': 'crypto', 'node:http': 'http', 'node:url': 'url',
-    'fs': 'fs', 'path': 'path', 'os': 'os', 'crypto': 'crypto',
+    'fs': 'node:fs/promises', 'path': 'node:path', 'os': 'os', 'crypto': 'crypto',
     'http': 'http', 'url': 'url', 'events': 'events', 'stream': 'stream',
     'child_process': 'child_process', 'util': 'util', 'buffer': 'buffer',
   },
