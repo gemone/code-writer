@@ -5,7 +5,7 @@ const shared = {
   platform: 'node',
   target: 'node20',
   format: 'cjs',
-  external: ['better-sqlite3', '@modelcontextprotocol/sdk'],
+  external: ['better-sqlite3', '@modelcontextprotocol/sdk', '@ast-grep/napi', '@ast-grep/napi-*', '@ast-grep/lang-*'],
   sourcemap: true,
 };
 

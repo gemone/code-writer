@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DatabaseManager } from '../engine/database.js';
+import { lintCode, isSupported, type AstRule } from '../engine/ast.js';
 
 const EXT_TO_LANG: Record<string, string> = {
   '.ts': 'typescript', '.tsx': 'typescript', '.mts': 'typescript', '.cts': 'typescript',
@@ -17,20 +17,15 @@ interface HookInput {
   };
 }
 
-const VIOLATIONS: Record<string, { pattern: RegExp; message: string; severity: string }[]> = {
+const AST_RULES: Record<string, AstRule[]> = {
   typescript: [
-    { pattern: /\bvar\s+/, message: 'Use `const` or `let` instead of `var`.', severity: 'error' },
-    { pattern: /:\s*any\b/, message: 'Avoid `any` type. Use `unknown` and narrow with type guards.', severity: 'warn' },
-    { pattern: /==\s|[^=!]==[^=]/, message: 'Use `===` and `!==` instead of `==` and `!=`.', severity: 'warn' },
-    { pattern: /console\.log\(/, message: 'Remove `console.log` in production code.', severity: 'info' },
+    { kind: 'pattern', value: 'var $NAME = $VALUE', message: 'Use `const` or `let` instead of `var`.', severity: 'error' },
+    { kind: 'pattern', value: '$A == $B', message: 'Use `===` and `!==` instead of `==` and `!=`.', severity: 'warn' },
+    { kind: 'pattern', value: 'console.log($$$ARGS)', message: 'Remove `console.log` in production code.', severity: 'info' },
+    { kind: 'pattern', value: '$A != $B', message: 'Use `!==` instead of `!=`.', severity: 'warn' },
   ],
   python: [
-    { pattern: /import\s+os\.path/, message: 'Prefer `pathlib.Path` over `os.path`.', severity: 'warn' },
-    { pattern: /\.format\(/, message: 'Prefer f-strings over `.format()`.', severity: 'info' },
-    { pattern: /^\s*except\s*:/m, message: 'Bare `except:` is prohibited. Catch specific exceptions.', severity: 'error' },
-    { pattern: /except\s+Exception\s*:/, message: 'Prefer specific exceptions over broad `except Exception`.', severity: 'warn' },
-    { pattern: /open\([^)]+\)(?!\s*as)/, message: 'Use `with open(...)` context manager for file operations.', severity: 'error' },
-    { pattern: /from\s+\w+\s+import\s+\*/, message: 'Avoid wildcard imports. Import specific names.', severity: 'warn' },
+    { kind: 'kind', value: 'wildcard_import', message: 'Avoid wildcard imports. Import specific names.', severity: 'warn' },
   ],
 };
 
@@ -42,7 +37,7 @@ try {
 
   const ext = path.extname(filePath).toLowerCase();
   const lang = EXT_TO_LANG[ext];
-  if (!lang) { process.exit(0); }
+  if (!lang || !isSupported(lang)) { process.exit(0); }
 
   // Read file content
   let content = data.tool_input?.content;
@@ -51,24 +46,42 @@ try {
   }
   if (!content) { process.exit(0); }
 
-  const langViolations = VIOLATIONS[lang] || [];
-  const findings: { message: string; severity: string }[] = [];
+  const rules = AST_RULES[lang] || [];
+  if (rules.length === 0) { process.exit(0); }
 
-  for (const v of langViolations) {
-    if (v.pattern.test(content)) {
-      findings.push({ message: v.message, severity: v.severity });
+  // AST-based linting with line numbers
+  const results = lintCode(lang, content, rules);
+
+  // For Python, also check bare except clauses via kind matching
+  if (lang === 'python') {
+    const { parseCode } = require('../engine/ast.js');
+    const root = parseCode(lang, content);
+    const exceptClauses = root.root().findAll({ rule: { kind: 'except_clause' } }) || [];
+    for (const clause of exceptClauses) {
+      // Bare except: has only 'except', ':', 'block' children (no exception type)
+      const children = clause.children();
+      const hasType = children.length > 3 || (children.length === 3 && children[1].kind() !== ':');
+      if (!hasType) {
+        results.push({
+          message: 'Bare `except:` is prohibited. Catch specific exceptions.',
+          severity: 'error',
+          line: clause.range().start.line,
+          column: clause.range().start.column,
+          text: clause.text().split('\n')[0],
+        });
+      }
     }
   }
 
-  if (findings.length > 0) {
-    let reminder = `<system-reminder>\nConvention violations found in ${path.basename(filePath)}:\n\n`;
-    for (const f of findings) {
-      const icon = f.severity === 'error' ? '🔴' : f.severity === 'warn' ? '🟡' : '🔵';
-      reminder += `${icon} ${f.message}\n`;
-    }
-    reminder += `\nUse \`lang_conventions(language: "${lang}")\` for full conventions.\n</system-reminder>`;
-    process.stdout.write(reminder);
+  if (results.length === 0) { process.exit(0); }
+
+  let reminder = `<system-reminder>\nConvention violations found in ${path.basename(filePath)}:\n\n`;
+  for (const r of results) {
+    const icon = r.severity === 'error' ? '🔴' : r.severity === 'warn' ? '🟡' : '🔵';
+    reminder += `${icon} Line ${r.line + 1}: ${r.message}\n`;
   }
+  reminder += `\nUse \`lang_conventions(language: "${lang}")\` for full conventions.\n</system-reminder>`;
+  process.stdout.write(reminder);
 } catch {
   // Silent failure
 }

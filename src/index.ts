@@ -8,3 +8,4 @@ export { createLangSearchTool } from './tools/lang-search.js';
 export { createLangConventionsTool } from './tools/lang-conventions.js';
 export { createLangCompareTool } from './tools/lang-compare.js';
 export { createLangFetchTool } from './tools/lang-fetch.js';
+export { createLangAstTool } from './tools/lang-ast.js';

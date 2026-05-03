@@ -18,6 +18,7 @@ Works with both **Claude Code** and **OpenCode** via standard MCP protocol.
 | `lang_conventions` | Get coding conventions for a language |
 | `lang_compare` | Compare approaches across languages |
 | `lang_fetch` | Fetch and register stdlib data for a new language |
+| `lang_ast` | AST-based code query, replace, lint, and extract |
 
 ## Supported Languages
 

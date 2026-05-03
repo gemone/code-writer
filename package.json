@@ -13,6 +13,15 @@
     "add-lang": "node scripts/add-language.mjs"
   },
   "dependencies": {
+    "@ast-grep/lang-bash": "^0.0.8",
+    "@ast-grep/lang-c": "^0.0.6",
+    "@ast-grep/lang-cpp": "^0.0.6",
+    "@ast-grep/lang-go": "^0.0.6",
+    "@ast-grep/lang-java": "^0.0.7",
+    "@ast-grep/lang-python": "^0.0.6",
+    "@ast-grep/lang-ruby": "^0.0.7",
+    "@ast-grep/lang-rust": "^0.0.7",
+    "@ast-grep/napi": "^0.42.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^11.0.0",
     "js-yaml": "^4.1.0",

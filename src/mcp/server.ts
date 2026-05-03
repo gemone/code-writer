@@ -9,6 +9,7 @@ import { createLangSearchTool } from '../tools/lang-search.js';
 import { createLangConventionsTool } from '../tools/lang-conventions.js';
 import { createLangCompareTool } from '../tools/lang-compare.js';
 import { createLangFetchTool } from '../tools/lang-fetch.js';
+import { createLangAstTool } from '../tools/lang-ast.js';
 
 async function main() {
   const db = new DatabaseManager();
@@ -24,7 +25,9 @@ async function main() {
   const langCompareTool = createLangCompareTool(queryEngine);
   const langFetchTool = createLangFetchTool(queryEngine, loader);
 
-  const tools = [langRefTool, langSearchTool, langConventionsTool, langCompareTool, langFetchTool];
+  const langAstTool = createLangAstTool();
+
+  const tools = [langRefTool, langSearchTool, langConventionsTool, langCompareTool, langFetchTool, langAstTool];
 
   const server = new Server(
     { name: 'code-standards', version: '0.1.0' },

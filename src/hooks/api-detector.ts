@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseManager } from '../engine/database.js';
+import { extractImports, isSupported } from '../engine/ast.js';
 
 const EXT_TO_LANG: Record<string, string> = {
   '.ts': 'typescript', '.tsx': 'typescript', '.mts': 'typescript', '.cts': 'typescript',
@@ -26,29 +27,12 @@ const MODULE_ALIASES: Record<string, Record<string, string>> = {
   },
 };
 
-const IMPORT_PATTERNS = [
-  /import\s+(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g,
-  /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
-  /from\s+([\w.]+)\s+import/g,
-];
-
 interface HookInput {
   tool_name?: string;
   tool_input?: {
     file_path?: string;
     content?: string;
   };
-}
-
-function extractModules(content: string): string[] {
-  const modules = new Set<string>();
-  for (const pattern of IMPORT_PATTERNS) {
-    let match;
-    while ((match = pattern.exec(content)) !== null) {
-      modules.add(match[1]);
-    }
-  }
-  return [...modules];
 }
 
 const input = fs.readFileSync(0, 'utf-8');
@@ -59,7 +43,7 @@ try {
 
   const ext = path.extname(filePath).toLowerCase();
   const lang = EXT_TO_LANG[ext];
-  if (!lang) { process.exit(0); }
+  if (!lang || !isSupported(lang)) { process.exit(0); }
 
   let content = data.tool_input?.content;
   if (!content && fs.existsSync(filePath)) {
@@ -67,16 +51,12 @@ try {
   }
   if (!content) { process.exit(0); }
 
-  // Strip comments to avoid false positives
-  const stripped = content
-    .replace(/\/\/.*$/gm, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/#.*$/gm, '');
-
-  const rawModules = extractModules(stripped);
-  if (rawModules.length === 0) { process.exit(0); }
+  // AST-based import extraction (no comment stripping needed)
+  const imports = extractImports(lang, content);
+  if (imports.length === 0) { process.exit(0); }
 
   const aliases = MODULE_ALIASES[lang] || {};
+  const rawModules = imports.map(i => i.module);
   const resolvedModules = rawModules
     .map(m => aliases[m] || m)
     .filter(m => !m.startsWith('.') && !m.startsWith('/'));
