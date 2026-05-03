@@ -1,0 +1,17 @@
+version: 1
+languages:
+  typescript:
+    name: TypeScript
+    version: "5.7"
+    extensions: [".ts", ".tsx", ".mts", ".cts"]
+    aliases: ["ts", "tsx"]
+    dataDir: "typescript"
+    tags: ["static-typing", "javascript-superset", "web"]
+
+  python:
+    name: Python
+    version: "3.13"
+    extensions: [".py", ".pyi", ".pyw"]
+    aliases: ["py", "python3"]
+    dataDir: "python"
+    tags: ["dynamic-typing", "scripting", "data-science"]

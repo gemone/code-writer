@@ -1,0 +1,133 @@
+version: 1
+conventions:
+  - id: meaningful-names
+    name: Meaningful Names
+    severity: warn
+    description: Use descriptive names that reveal intent. Avoid single-letter variables except for loop counters.
+    category: naming
+    examples:
+      bad:
+        - "const x = getUser()"
+        - "function calc(a, b) { return a * b; }"
+      good:
+        - "const currentUser = getUser()"
+        - "function calculateArea(width, height) { return width * height; }"
+
+  - id: dry
+    name: DRY (Don't Repeat Yourself)
+    severity: warn
+    description: Avoid code duplication. Extract repeated logic into reusable functions or modules.
+    category: structure
+    examples:
+      bad:
+        - |
+          // Same validation in multiple places
+          if (email.includes('@') && email.includes('.')) { ... }
+          if (email.includes('@') && email.includes('.')) { ... }
+      good:
+        - |
+          // Single validation function
+          function isValidEmail(email: string): boolean {
+            return email.includes('@') && email.includes('.');
+          }
+
+  - id: single-responsibility
+    name: Single Responsibility
+    severity: warn
+    description: Each function or class should have one reason to change. Keep functions focused and small.
+    category: structure
+    examples:
+      bad:
+        - |
+          function processUser(user) {
+            validateUser(user);
+            saveToDatabase(user);
+            sendEmail(user);
+            updateAnalytics(user);
+          }
+      good:
+        - |
+          function validateUser(user) { ... }
+          function saveUser(user) { ... }
+          function sendWelcomeEmail(user) { ... }
+          function trackUserCreation(user) { ... }
+
+  - id: error-handling
+    name: Error Handling
+    severity: error
+    description: Always handle errors explicitly. Never ignore errors or use empty catch blocks.
+    category: reliability
+    examples:
+      bad:
+        - |
+          try {
+            await fetchData();
+          } catch (e) {}
+      good:
+        - |
+          try {
+            await fetchData();
+          } catch (error) {
+            logger.error('Failed to fetch data', { error });
+            throw new DataFetchError('Unable to fetch data', { cause: error });
+          }
+
+  - id: immutability
+    name: Immutability
+    severity: info
+    description: Prefer immutable data structures. Avoid mutating objects and arrays directly.
+    category: data
+    examples:
+      bad:
+        - |
+          const items = [1, 2, 3];
+          items.push(4);
+          user.name = 'new name';
+      good:
+        - |
+          const items = [1, 2, 3];
+          const newItems = [...items, 4];
+          const updatedUser = { ...user, name: 'new name' };
+
+namingConventions:
+  functions:
+    rule: "Use verb phrases"
+    examples:
+      - getUser
+      - calculateTotal
+      - isValid
+      - hasPermission
+      - shouldUpdate
+
+  booleans:
+    rule: "Prefix with is/has/should"
+    examples:
+      - isActive
+      - hasChildren
+      - shouldRetry
+      - canEdit
+      - wasProcessed
+
+  constants:
+    rule: "Use UPPER_SNAKE_CASE"
+    examples:
+      - MAX_RETRY_COUNT
+      - API_BASE_URL
+      - DEFAULT_TIMEOUT
+      - CONFIG_FILE_PATH
+
+  classes:
+    rule: "Use PascalCase noun phrases"
+    examples:
+      - UserService
+      - HttpClient
+      - DatabaseConnection
+      - ApiResponse
+
+  interfaces:
+    rule: "Use PascalCase, optionally prefix with I"
+    examples:
+      - User
+      - IUser
+      - ApiResponse
+      - IApiResponse

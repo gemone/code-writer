@@ -1,0 +1,30 @@
+# Language Template
+# Copy this file to data/<language>/language.yaml and fill in the details
+
+version: 1
+language:
+  name: "" # TODO: Language name (e.g., "TypeScript")
+  version: "" # TODO: Language version (e.g., "5.7")
+  website: "" # TODO: Official website URL
+  documentation: "" # TODO: Documentation URL
+  extensions: [] # TODO: File extensions (e.g., [".ts", ".tsx"])
+  aliases: [] # TODO: Common aliases (e.g., ["ts", "tsx"])
+
+  typing:
+    system: "" # TODO: "static", "dynamic", or "gradual"
+    inference: false # TODO: Does the language support type inference?
+    generics: false # TODO: Does the language support generics?
+
+  paradigms: [] # TODO: Supported paradigms (e.g., ["object-oriented", "functional", "imperative"])
+
+  compilation:
+    type: "" # TODO: "compiled", "interpreted", or "transpiled"
+    target: "" # TODO: Compilation target (e.g., "JavaScript", "bytecode", "native")
+
+  features: [] # TODO: Key features (e.g., ["type-checking", "modules", "async-await"])
+
+  ecosystem:
+    package_manager: "" # TODO: Primary package manager (e.g., "npm", "pip")
+    build_tools: [] # TODO: Common build tools (e.g., ["webpack", "vite"])
+    testing: [] # TODO: Common testing frameworks (e.g., ["jest", "vitest"])
+    linting: [] # TODO: Common linting tools (e.g., ["eslint"])

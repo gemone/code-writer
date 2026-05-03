@@ -1,0 +1,45 @@
+# Syntax Template
+# Copy this file to data/<language>/syntax.yaml and fill in the details
+
+version: 1
+syntax:
+  - category: "" # TODO: Category name (e.g., "variables", "functions", "control-flow")
+    description: "" # TODO: Brief description of this syntax category
+    sections:
+      - name: "" # TODO: Section name (e.g., "Variable Declaration")
+        description: "" # TODO: What this syntax does
+        syntax: "" # TODO: The syntax pattern (e.g., "const name: Type = value;")
+        examples:
+          - code: "" # TODO: Example code
+            description: "" # TODO: What the example demonstrates
+        notes: [] # TODO: Additional notes or caveats
+
+      # Example section:
+      - name: "Variable Declaration"
+        description: "Declare variables with const, let, or var"
+        syntax: "const|let|var name: Type = value;"
+        examples:
+          - code: |
+              const immutable = 'cannot reassign';
+              let mutable = 'can reassign';
+              var legacy = 'avoid using';
+            description: "Different variable declaration keywords"
+          - code: |
+              const { name, age } = user;
+              const [first, ...rest] = items;
+            description: "Destructuring assignment"
+        notes:
+          - "Always prefer const over let"
+          - "Never use var in modern code"
+          - "Use destructuring when accessing multiple properties"
+
+  - category: "" # TODO: Another category (e.g., "functions")
+    description: "" # TODO: Brief description
+    sections:
+      - name: "" # TODO: Section name
+        description: "" # TODO: What this syntax does
+        syntax: "" # TODO: The syntax pattern
+        examples:
+          - code: "" # TODO: Example code
+            description: "" # TODO: What the example demonstrates
+        notes: [] # TODO: Additional notes

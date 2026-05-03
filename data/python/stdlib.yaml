@@ -1,0 +1,1434 @@
+# Python Standard Library Reference
+# Common methods and their usage across core modules
+
+modules:
+  # ---------------------------------------------------------------------------
+  # list
+  # ---------------------------------------------------------------------------
+  - module: list
+    type: builtin
+    description: Mutable sequence type for storing ordered collections.
+    methods:
+      - name: append
+        signature: "list.append(item: T) -> None"
+        description: Add a single item to the end of the list in place.
+        returns: None
+        example: |
+          items: list[int] = [1, 2, 3]
+          items.append(4)
+          # items is now [1, 2, 3, 4]
+        tags: [mutable, sequence, add]
+
+      - name: extend
+        signature: "list.extend(iterable: Iterable[T]) -> None"
+        description: Extend the list by appending all items from the given iterable.
+        returns: None
+        example: |
+          items: list[int] = [1, 2, 3]
+          items.extend([4, 5, 6])
+          # items is now [1, 2, 3, 4, 5, 6]
+        tags: [mutable, sequence, add, bulk]
+
+      - name: insert
+        signature: "list.insert(index: int, item: T) -> None"
+        description: Insert an item at the specified index. Items after the index shift right.
+        returns: None
+        example: |
+          items: list[int] = [1, 2, 3]
+          items.insert(1, 10)
+          # items is now [1, 10, 2, 3]
+        tags: [mutable, sequence, add, position]
+
+      - name: remove
+        signature: "list.remove(item: T) -> None"
+        description: Remove the first occurrence of the given item. Raises ValueError if not found.
+        returns: None
+        example: |
+          items: list[int] = [1, 2, 3, 2]
+          items.remove(2)
+          # items is now [1, 3, 2]
+        tags: [mutable, sequence, remove]
+
+      - name: pop
+        signature: "list.pop(index: int = -1) -> T"
+        description: Remove and return the item at the given index (default last).
+        returns: T
+        example: |
+          items: list[int] = [1, 2, 3]
+          last = items.pop()
+          # last = 3, items is now [1, 2]
+
+          first = items.pop(0)
+          # first = 1, items is now [2]
+        tags: [mutable, sequence, remove]
+
+      - name: clear
+        signature: "list.clear() -> None"
+        description: Remove all items from the list in place.
+        returns: None
+        example: |
+          items: list[int] = [1, 2, 3]
+          items.clear()
+          # items is now []
+        tags: [mutable, sequence, remove]
+
+      - name: index
+        signature: "list.index(item: T, start: int = 0, end: int = sys.maxsize) -> int"
+        description: Return the zero-based index of the first occurrence of the item. Raises ValueError if not found.
+        returns: int
+        example: |
+          items: list[str] = ["a", "b", "c", "b"]
+          pos = items.index("b")
+          # pos = 1
+
+          pos = items.index("b", 2)
+          # pos = 3 (search starts at index 2)
+        tags: [sequence, search]
+
+      - name: count
+        signature: "list.count(item: T) -> int"
+        description: Return the number of times the item appears in the list.
+        returns: int
+        example: |
+          items: list[int] = [1, 2, 2, 3, 2]
+          n = items.count(2)
+          # n = 3
+        tags: [sequence, search]
+
+      - name: sort
+        signature: "list.sort(*, key: Callable[[T], Any] | None = None, reverse: bool = False) -> None"
+        description: Sort the list in place. Use key for custom sort order, reverse for descending.
+        returns: None
+        example: |
+          names: list[str] = ["Charlie", "Alice", "Bob"]
+          names.sort()
+          # ["Alice", "Bob", "Charlie"]
+
+          names.sort(key=len)
+          # ["Bob", "Alice", "Charlie"]
+
+          names.sort(reverse=True)
+          # ["Charlie", "Bob", "Alice"]
+        tags: [mutable, sequence, sort]
+
+      - name: reverse
+        signature: "list.reverse() -> None"
+        description: Reverse the order of items in the list in place.
+        returns: None
+        example: |
+          items: list[int] = [1, 2, 3]
+          items.reverse()
+          # items is now [3, 2, 1]
+        tags: [mutable, sequence, sort]
+
+      - name: copy
+        signature: "list.copy() -> list[T]"
+        description: Return a shallow copy of the list.
+        returns: "list[T]"
+        example: |
+          original: list[int] = [1, 2, 3]
+          copied = original.copy()
+          copied.append(4)
+          # original is still [1, 2, 3], copied is [1, 2, 3, 4]
+        tags: [sequence, copy]
+
+      - name: __len__
+        signature: "list.__len__() -> int"
+        description: Return the number of items in the list. Called by len().
+        returns: int
+        example: |
+          items: list[int] = [1, 2, 3]
+          size = len(items)
+          # size = 3
+        tags: [sequence, builtin]
+
+      - name: __contains__
+        signature: "list.__contains__(item: T) -> bool"
+        description: Check whether the list contains the given item. Called by the 'in' operator.
+        returns: bool
+        example: |
+          items: list[int] = [1, 2, 3]
+          has_two = 2 in items
+          # has_two = True
+
+          has_five = 5 in items
+          # has_five = False
+        tags: [sequence, search, builtin]
+
+  # ---------------------------------------------------------------------------
+  # dict
+  # ---------------------------------------------------------------------------
+  - module: dict
+    type: builtin
+    description: Mutable mapping type for storing key-value pairs with O(1) average lookup.
+    methods:
+      - name: get
+        signature: "dict.get(key: K, default: V | None = None) -> V | None"
+        description: Return the value for the given key, or the default if the key is not present.
+        returns: "V | None"
+        example: |
+          config: dict[str, str] = {"host": "localhost", "port": "8080"}
+          host = config.get("host")
+          # "localhost"
+
+          timeout = config.get("timeout", "30")
+          # "30" (key missing, returns default)
+        tags: [mapping, access]
+
+      - name: setdefault
+        signature: "dict.setdefault(key: K, default: V | None = None) -> V | None"
+        description: >
+          If the key is in the dict, return its value. Otherwise, insert the key
+          with the given default value and return the default.
+        returns: "V | None"
+        example: |
+          counts: dict[str, int] = {}
+          counts.setdefault("apples", 0)
+          # {"apples": 0}
+
+          counts["apples"] += 1
+          # {"apples": 1}
+        tags: [mapping, add]
+
+      - name: keys
+        signature: "dict.keys() -> KeysView[K]"
+        description: Return a view of all keys in the dictionary.
+        returns: "KeysView[K]"
+        example: |
+          data: dict[str, int] = {"a": 1, "b": 2, "c": 3}
+          key_list = list(data.keys())
+          # ["a", "b", "c"]
+        tags: [mapping, view]
+
+      - name: values
+        signature: "dict.values() -> ValuesView[V]"
+        description: Return a view of all values in the dictionary.
+        returns: "ValuesView[V]"
+        example: |
+          data: dict[str, int] = {"a": 1, "b": 2, "c": 3}
+          total = sum(data.values())
+          # 6
+        tags: [mapping, view]
+
+      - name: items
+        signature: "dict.items() -> ItemsView[K, V]"
+        description: Return a view of all (key, value) pairs in the dictionary.
+        returns: "ItemsView[K, V]"
+        example: |
+          data: dict[str, int] = {"a": 1, "b": 2, "c": 3}
+          for key, value in data.items():
+              print(f"{key} => {value}")
+        tags: [mapping, view, iteration]
+
+      - name: update
+        signature: "dict.update(other: Mapping[K, V] | Iterable[tuple[K, V]], **kwargs: V) -> None"
+        description: Update the dict with key-value pairs from another mapping or iterable.
+        returns: None
+        example: |
+          defaults: dict[str, int] = {"retries": 3, "timeout": 30}
+          overrides: dict[str, int] = {"timeout": 60}
+          defaults.update(overrides)
+          # {"retries": 3, "timeout": 60}
+        tags: [mapping, add, bulk]
+
+      - name: pop
+        signature: "dict.pop(key: K, default: V | _UNSET = _UNSET) -> V"
+        description: >
+          Remove and return the value for the given key. If the key is not found
+          and no default is given, raise KeyError.
+        returns: V
+        example: |
+          data: dict[str, int] = {"a": 1, "b": 2}
+          value = data.pop("a")
+          # value = 1, data is now {"b": 2}
+
+          value = data.pop("c", -1)
+          # value = -1 (key not found, returns default)
+        tags: [mapping, remove]
+
+      - name: popitem
+        signature: "dict.popitem() -> tuple[K, V]"
+        description: >
+          Remove and return the last inserted (key, value) pair. Raises KeyError
+          if the dict is empty. Since Python 3.7 dicts are insertion-ordered.
+        returns: "tuple[K, V]"
+        example: |
+          data: dict[str, int] = {"a": 1, "b": 2, "c": 3}
+          last = data.popitem()
+          # last = ("c", 3), data is now {"a": 1, "b": 2}
+        tags: [mapping, remove]
+
+      - name: clear
+        signature: "dict.clear() -> None"
+        description: Remove all items from the dictionary.
+        returns: None
+        example: |
+          data: dict[str, int] = {"a": 1, "b": 2}
+          data.clear()
+          # data is now {}
+        tags: [mapping, remove]
+
+      - name: copy
+        signature: "dict.copy() -> dict[K, V]"
+        description: Return a shallow copy of the dictionary.
+        returns: "dict[K, V]"
+        example: |
+          original: dict[str, list[int]] = {"nums": [1, 2, 3]}
+          copied = original.copy()
+          copied["nums"].append(4)
+          # Both original and copied have "nums" = [1, 2, 3, 4]
+          # because it is a shallow copy
+        tags: [mapping, copy]
+
+      - name: fromkeys
+        signature: "dict.fromkeys(iterable: Iterable[K], value: V | None = None) -> dict[K, V]"
+        description: Create a new dict with keys from the iterable and values set to the given value.
+        returns: "dict[K, V]"
+        example: |
+          keys = ["a", "b", "c"]
+          data = dict.fromkeys(keys, 0)
+          # {"a": 0, "b": 0, "c": 0}
+        tags: [mapping, create]
+
+  # ---------------------------------------------------------------------------
+  # str
+  # ---------------------------------------------------------------------------
+  - module: str
+    type: builtin
+    description: Immutable sequence of Unicode characters with rich text processing methods.
+    methods:
+      - name: upper
+        signature: "str.upper() -> str"
+        description: Return a copy of the string with all characters converted to uppercase.
+        returns: str
+        example: |
+          text = "Hello, World!"
+          result = text.upper()
+          # "HELLO, WORLD!"
+        tags: [string, transform]
+
+      - name: lower
+        signature: "str.lower() -> str"
+        description: Return a copy of the string with all characters converted to lowercase.
+        returns: str
+        example: |
+          text = "Hello, World!"
+          result = text.lower()
+          # "hello, world!"
+        tags: [string, transform]
+
+      - name: strip
+        signature: "str.strip(chars: str | None = None) -> str"
+        description: Return a copy of the string with leading and trailing whitespace (or specified chars) removed.
+        returns: str
+        example: |
+          text = "  hello  "
+          result = text.strip()
+          # "hello"
+
+          path = "---hello---"
+          result = path.strip("-")
+          # "hello"
+        tags: [string, transform, cleanup]
+
+      - name: split
+        signature: "str.split(sep: str | None = None, maxsplit: int = -1) -> list[str]"
+        description: >
+          Split the string by the given separator and return a list of parts.
+          If no separator is given, split on whitespace.
+        returns: "list[str]"
+        example: |
+          csv_line = "Alice,30,Engineer"
+          parts = csv_line.split(",")
+          # ["Alice", "30", "Engineer"]
+
+          text = "  one   two  three  "
+          words = text.split()
+          # ["one", "two", "three"]
+        tags: [string, parse]
+
+      - name: join
+        signature: "str.join(iterable: Iterable[str]) -> str"
+        description: Concatenate strings from the iterable using this string as separator.
+        returns: str
+        example: |
+          words = ["Hello", "World"]
+          sentence = " ".join(words)
+          # "Hello World"
+
+          path_parts = ["usr", "local", "bin"]
+          path = "/".join(path_parts)
+          # "usr/local/bin"
+        tags: [string, build]
+
+      - name: replace
+        signature: "str.replace(old: str, new: str, count: int = -1) -> str"
+        description: Return a copy with occurrences of 'old' replaced by 'new'. Optionally limit count.
+        returns: str
+        example: |
+          text = "Hello World World"
+          result = text.replace("World", "Python")
+          # "Hello Python Python"
+
+          result = text.replace("World", "Python", 1)
+          # "Hello Python World"
+        tags: [string, transform]
+
+      - name: find
+        signature: "str.find(sub: str, start: int = 0, end: int = sys.maxsize) -> int"
+        description: Return the lowest index where the substring is found, or -1 if not found.
+        returns: int
+        example: |
+          text = "Hello, World!"
+          pos = text.find("World")
+          # 7
+
+          pos = text.find("Python")
+          # -1
+        tags: [string, search]
+
+      - name: startswith
+        signature: "str.startswith(prefix: str | tuple[str, ...], start: int = 0, end: int = sys.maxsize) -> bool"
+        description: Return True if the string starts with the given prefix.
+        returns: bool
+        example: |
+          filename = "document.pdf"
+          filename.endswith(".pdf")  # True
+
+          url = "https://example.com"
+          url.startswith(("http://", "https://"))  # True
+        tags: [string, search, validation]
+
+      - name: endswith
+        signature: "str.endswith(suffix: str | tuple[str, ...], start: int = 0, end: int = sys.maxsize) -> bool"
+        description: Return True if the string ends with the given suffix.
+        returns: bool
+        example: |
+          filename = "image.png"
+          is_image = filename.endswith((".png", ".jpg", ".gif"))
+          # True
+        tags: [string, search, validation]
+
+      - name: format
+        signature: "str.format(*args: object, **kwargs: object) -> str"
+        description: >
+          Format the string using positional and keyword arguments.
+          Prefer f-strings for new code (see conventions).
+        returns: str
+        example: |
+          template = "Hello, {name}! You are {age} years old."
+          result = template.format(name="Alice", age=30)
+          # "Hello, Alice! You are 30 years old."
+        tags: [string, format]
+
+      - name: encode
+        signature: "str.encode(encoding: str = 'utf-8', errors: str = 'strict') -> bytes"
+        description: Encode the string to bytes using the specified encoding.
+        returns: bytes
+        example: |
+          text = "Hello, World!"
+          encoded = text.encode("utf-8")
+          # b'Hello, World!'
+
+          url_safe = text.encode("ascii", errors="replace")
+        tags: [string, conversion]
+
+      - name: decode
+        signature: "bytes.decode(encoding: str = 'utf-8', errors: str = 'strict') -> str"
+        description: Decode bytes to a string using the specified encoding. (Method on bytes objects.)
+        returns: str
+        example: |
+          data = b"Hello, World!"
+          text = data.decode("utf-8")
+          # "Hello, World!"
+        tags: [string, conversion]
+
+      - name: isdigit
+        signature: "str.isdigit() -> bool"
+        description: Return True if all characters in the string are digits.
+        returns: bool
+        example: |
+          "12345".isdigit()   # True
+          "123.45".isdigit()  # False (period is not a digit)
+          "12a45".isdigit()   # False
+        tags: [string, validation]
+
+      - name: isalpha
+        signature: "str.isalpha() -> bool"
+        description: Return True if all characters in the string are alphabetic.
+        returns: bool
+        example: |
+          "Hello".isalpha()    # True
+          "Hello World".isalpha()  # False (space is not alphabetic)
+          "Hello123".isalpha() # False
+        tags: [string, validation]
+
+      - name: capitalize
+        signature: "str.capitalize() -> str"
+        description: Return a copy with the first character capitalized and the rest lowercased.
+        returns: str
+        example: |
+          text = "hello WORLD"
+          result = text.capitalize()
+          # "Hello world"
+        tags: [string, transform]
+
+      - name: title
+        signature: "str.title() -> str"
+        description: Return a copy with the first character of each word capitalized.
+        returns: str
+        example: |
+          text = "hello world"
+          result = text.title()
+          # "Hello World"
+        tags: [string, transform]
+
+      - name: center
+        signature: "str.center(width: int, fillchar: str = ' ') -> str"
+        description: Return a centered string of the given width, padded with fillchar.
+        returns: str
+        example: |
+          text = "hello"
+          result = text.center(20, "-")
+          # "-------hello--------"
+        tags: [string, format]
+
+      - name: ljust
+        signature: "str.ljust(width: int, fillchar: str = ' ') -> str"
+        description: Return a left-justified string of the given width, padded with fillchar.
+        returns: str
+        example: |
+          text = "hello"
+          result = text.ljust(20, ".")
+          # "hello..............."
+        tags: [string, format]
+
+      - name: rjust
+        signature: "str.rjust(width: int, fillchar: str = ' ') -> str"
+        description: Return a right-justified string of the given width, padded with fillchar.
+        returns: str
+        example: |
+          text = "hello"
+          result = text.rjust(20, ".")
+          # "...............hello"
+        tags: [string, format]
+
+  # ---------------------------------------------------------------------------
+  # os
+  # ---------------------------------------------------------------------------
+  - module: os
+    type: stdlib
+    description: >
+      Operating system interface module for file system operations, environment
+      variables, and process management. Prefer pathlib for path operations.
+    methods:
+      - name: getcwd
+        signature: "os.getcwd() -> str"
+        description: Return the current working directory as a string.
+        returns: str
+        example: |
+          import os
+          cwd = os.getcwd()
+          # "/home/user/projects/myapp"
+        tags: [filesystem, path]
+
+      - name: listdir
+        signature: "os.listdir(path: str = '.') -> list[str]"
+        description: Return a list of entries in the given directory (names only, not full paths).
+        returns: "list[str]"
+        example: |
+          import os
+          entries = os.listdir(".")
+          for entry in entries:
+              print(entry)
+        tags: [filesystem, directory]
+
+      - name: makedirs
+        signature: "os.makedirs(name: str, mode: int = 0o777, exist_ok: bool = False) -> None"
+        description: >
+          Create directories recursively, including any missing parent
+          directories. Does not raise if exist_ok is True and the directory
+          already exists.
+        returns: None
+        example: |
+          import os
+          os.makedirs("output/reports/2024", exist_ok=True)
+        tags: [filesystem, directory, create]
+
+      - name: remove
+        signature: "os.remove(path: str) -> None"
+        description: Remove (delete) a file. Raises FileNotFoundError if the file does not exist.
+        returns: None
+        example: |
+          import os
+          if os.path.exists("temp.txt"):
+              os.remove("temp.txt")
+        tags: [filesystem, delete]
+
+      - name: rename
+        signature: "os.rename(src: str, dst: str) -> None"
+        description: Rename a file or directory from src to dst.
+        returns: None
+        example: |
+          import os
+          os.rename("old_name.txt", "new_name.txt")
+        tags: [filesystem, rename]
+
+      - name: path.join
+        signature: "os.path.join(*paths: str) -> str"
+        description: >
+          Join one or more path components intelligently. The rightmost
+          component is always returned. Prefer pathlib.Path.joinpath().
+        returns: str
+        example: |
+          import os
+          full_path = os.path.join("/home", "user", "file.txt")
+          # "/home/user/file.txt"
+        tags: [filesystem, path]
+
+      - name: path.exists
+        signature: "os.path.exists(path: str) -> bool"
+        description: Return True if the given path exists (file, directory, or symlink).
+        returns: bool
+        example: |
+          import os
+          if os.path.exists("/etc/hosts"):
+              print("hosts file found")
+        tags: [filesystem, path, validation]
+
+      - name: path.isfile
+        signature: "os.path.isfile(path: str) -> bool"
+        description: Return True if the path exists and is a regular file.
+        returns: bool
+        example: |
+          import os
+          if os.path.isfile("config.json"):
+              with open("config.json") as f:
+                  print(f.read())
+        tags: [filesystem, path, validation]
+
+      - name: path.isdir
+        signature: "os.path.isdir(path: str) -> bool"
+        description: Return True if the path exists and is a directory.
+        returns: bool
+        example: |
+          import os
+          if os.path.isdir("src"):
+              for name in os.listdir("src"):
+                  print(name)
+        tags: [filesystem, path, validation]
+
+      - name: path.basename
+        signature: "os.path.basename(path: str) -> str"
+        description: Return the final component of a path. Prefer pathlib.Path.name.
+        returns: str
+        example: |
+          import os
+          name = os.path.basename("/home/user/file.txt")
+          # "file.txt"
+        tags: [filesystem, path]
+
+      - name: path.dirname
+        signature: "os.path.dirname(path: str) -> str"
+        description: Return the directory component of a path. Prefer pathlib.Path.parent.
+        returns: str
+        example: |
+          import os
+          directory = os.path.dirname("/home/user/file.txt")
+          # "/home/user"
+        tags: [filesystem, path]
+
+      - name: path.splitext
+        signature: "os.path.splitext(path: str) -> tuple[str, str]"
+        description: Split the path into a (root, ext) pair. Prefer pathlib.Path.stem and .suffix.
+        returns: "tuple[str, str]"
+        example: |
+          import os
+          root, ext = os.path.splitext("document.tar.gz")
+          # root = "document.tar", ext = ".gz"
+        tags: [filesystem, path]
+
+  # ---------------------------------------------------------------------------
+  # pathlib
+  # ---------------------------------------------------------------------------
+  - module: pathlib
+    type: stdlib
+    description: >
+      Object-oriented filesystem path manipulation. Preferred over os.path
+      for modern Python code. Paths are immutable objects.
+    methods:
+      - name: Path
+        signature: "pathlib.Path(*args: str | os.PathLike[str]) -> Path"
+        description: >
+          Construct a Path object from string segments or other path-like
+          objects. The concrete class is PurePath / Path (platform-aware).
+        returns: Path
+        example: |
+          from pathlib import Path
+
+          config_path = Path("etc") / "app" / "config.yaml"
+          # PosixPath('etc/app/config.yaml')
+
+          home = Path.home()
+          # PosixPath('/home/username')
+        tags: [pathlib, construct]
+
+      - name: exists
+        signature: "Path.exists() -> bool"
+        description: Return True if the path exists on disk.
+        returns: bool
+        example: |
+          from pathlib import Path
+          config = Path("config.yaml")
+          if config.exists():
+              data = config.read_text()
+        tags: [pathlib, validation]
+
+      - name: is_file
+        signature: "Path.is_file() -> bool"
+        description: Return True if the path is a regular file.
+        returns: bool
+        example: |
+          from pathlib import Path
+          readme = Path("README.md")
+          if readme.is_file():
+              content = readme.read_text()
+        tags: [pathlib, validation]
+
+      - name: is_dir
+        signature: "Path.is_dir() -> bool"
+        description: Return True if the path is a directory.
+        returns: bool
+        example: |
+          from pathlib import Path
+          src = Path("src")
+          if src.is_dir():
+              for py_file in src.glob("**/*.py"):
+                  print(py_file)
+        tags: [pathlib, validation]
+
+      - name: mkdir
+        signature: "Path.mkdir(mode: int = 0o777, parents: bool = False, exist_ok: bool = False) -> None"
+        description: Create a directory at this path. Use parents=True for recursive creation.
+        returns: None
+        example: |
+          from pathlib import Path
+          output_dir = Path("output/reports/2024")
+          output_dir.mkdir(parents=True, exist_ok=True)
+        tags: [pathlib, create]
+
+      - name: rmdir
+        signature: "Path.rmdir() -> None"
+        description: Remove this directory. The directory must be empty.
+        returns: None
+        example: |
+          from pathlib import Path
+          temp_dir = Path("temp")
+          if temp_dir.is_dir():
+              temp_dir.rmdir()
+        tags: [pathlib, delete]
+
+      - name: unlink
+        signature: "Path.unlink(missing_ok: bool = False) -> None"
+        description: Remove this file or symbolic link. Does not remove directories.
+        returns: None
+        example: |
+          from pathlib import Path
+          temp_file = Path("temp.txt")
+          temp_file.unlink(missing_ok=True)
+        tags: [pathlib, delete]
+
+      - name: glob
+        signature: "Path.glob(pattern: str) -> Generator[Path, None, None]"
+        description: >
+          Glob for files matching the given pattern relative to this directory.
+          Use '**' to match any number of subdirectories.
+        returns: "Generator[Path]"
+        example: |
+          from pathlib import Path
+          src = Path("src")
+
+          # All Python files recursively
+          for py_file in src.glob("**/*.py"):
+              print(py_file.name)
+
+          # Only top-level YAML files
+          for yaml_file in src.glob("*.yaml"):
+              print(yaml_file)
+        tags: [pathlib, search, glob]
+
+      - name: read_text
+        signature: "Path.read_text(encoding: str = 'utf-8', errors: str = 'strict') -> str"
+        description: Read the file as a string. Opens and closes the file automatically.
+        returns: str
+        example: |
+          from pathlib import Path
+          config = Path("config.yaml")
+          content = config.read_text()
+        tags: [pathlib, read]
+
+      - name: write_text
+        signature: "Path.write_text(data: str, encoding: str = 'utf-8', errors: str = 'strict') -> int"
+        description: Write the given string to the file. Returns the number of characters written.
+        returns: int
+        example: |
+          from pathlib import Path
+          output = Path("output.txt")
+          count = output.write_text("Hello, World!")
+          # count = 13
+        tags: [pathlib, write]
+
+      - name: read_bytes
+        signature: "Path.read_bytes() -> bytes"
+        description: Read the file as raw bytes. Opens and closes the file automatically.
+        returns: bytes
+        example: |
+          from pathlib import Path
+          image = Path("photo.png")
+          data = image.read_bytes()
+        tags: [pathlib, read, binary]
+
+      - name: write_bytes
+        signature: "Path.write_bytes(data: bytes) -> int"
+        description: Write the given bytes to the file. Returns the number of bytes written.
+        returns: int
+        example: |
+          from pathlib import Path
+          image = Path("copy.png")
+          image.write_bytes(original_bytes)
+        tags: [pathlib, write, binary]
+
+      - name: name
+        signature: "Path.name -> str"
+        description: The final component of the path (filename with extension).
+        returns: str
+        example: |
+          from pathlib import Path
+          p = Path("/home/user/document.txt")
+          p.name  # "document.txt"
+        tags: [pathlib, property]
+
+      - name: stem
+        signature: "Path.stem -> str"
+        description: The final component of the path without its suffix.
+        returns: str
+        example: |
+          from pathlib import Path
+          p = Path("/home/user/document.tar.gz")
+          p.stem  # "document.tar"
+        tags: [pathlib, property]
+
+      - name: suffix
+        signature: "Path.suffix -> str"
+        description: The file extension of the final component, including the leading dot.
+        returns: str
+        example: |
+          from pathlib import Path
+          p = Path("/home/user/document.tar.gz")
+          p.suffix  # ".gz"
+        tags: [pathlib, property]
+
+      - name: parent
+        signature: "Path.parent -> Path"
+        description: The logical parent of the path (directory containing this path).
+        returns: Path
+        example: |
+          from pathlib import Path
+          p = Path("/home/user/file.txt")
+          p.parent  # PosixPath('/home/user')
+          p.parent.parent  # PosixPath('/home')
+        tags: [pathlib, property]
+
+      - name: joinpath
+        signature: "Path.joinpath(*args: str | os.PathLike[str]) -> Path"
+        description: Join this path with additional segments. The / operator is preferred.
+        returns: Path
+        example: |
+          from pathlib import Path
+          base = Path("/home/user")
+          full = base.joinpath("documents", "file.txt")
+          # PosixPath('/home/user/documents/file.txt')
+
+          # Preferred: using the / operator
+          full = base / "documents" / "file.txt"
+        tags: [pathlib, path]
+
+      - name: resolve
+        signature: "Path.resolve(strict: bool = False) -> Path"
+        description: >
+          Make the path absolute, resolving symlinks. If strict is True and
+          the path does not exist, raises FileNotFoundError.
+        returns: Path
+        example: |
+          from pathlib import Path
+          p = Path("../other/file.txt")
+          resolved = p.resolve()
+          # PosixPath('/absolute/path/to/other/file.txt')
+        tags: [pathlib, path]
+
+      - name: stat
+        signature: "Path.stat() -> os.stat_result"
+        description: Return the file system status of the path (size, timestamps, permissions).
+        returns: "os.stat_result"
+        example: |
+          from pathlib import Path
+          p = Path("file.txt")
+          info = p.stat()
+          print(f"Size: {info.st_size} bytes")
+          print(f"Modified: {info.st_mtime}")
+        tags: [pathlib, metadata]
+
+  # ---------------------------------------------------------------------------
+  # json
+  # ---------------------------------------------------------------------------
+  - module: json
+    type: stdlib
+    description: >
+      JSON encoder and decoder for serializing Python objects to JSON strings
+      and deserializing JSON strings back to Python objects.
+    methods:
+      - name: dumps
+        signature: "json.dumps(obj: Any, *, indent: int | None = None, ensure_ascii: bool = True, default: Callable | None = None, sort_keys: bool = False) -> str"
+        description: Serialize a Python object to a JSON-formatted string.
+        returns: str
+        example: |
+          import json
+          data = {"name": "Alice", "age": 30, "active": True}
+          json_str = json.dumps(data, indent=2)
+          # {
+          #   "name": "Alice",
+          #   "age": 30,
+          #   "active": true
+          # }
+        tags: [json, serialize]
+
+      - name: loads
+        signature: "json.loads(s: str | bytes, *, cls: type[json.JSONDecoder] | None = None, object_hook: Callable | None = None) -> Any"
+        description: Deserialize a JSON string to a Python object.
+        returns: Any
+        example: |
+          import json
+          json_str = '{"name": "Alice", "age": 30}'
+          data = json.loads(json_str)
+          # {"name": "Alice", "age": 30}
+          print(data["name"])  # "Alice"
+        tags: [json, deserialize]
+
+      - name: dump
+        signature: "json.dump(obj: Any, fp: IO[str], *, indent: int | None = None, ensure_ascii: bool = True, default: Callable | None = None) -> None"
+        description: Serialize a Python object as JSON to a file-like object.
+        returns: None
+        example: |
+          import json
+          from pathlib import Path
+
+          data = {"name": "Alice", "scores": [95, 87, 92]}
+          Path("data.json").write_text(json.dumps(data, indent=2))
+        tags: [json, serialize, file]
+
+      - name: load
+        signature: "json.load(fp: IO[str], *, cls: type[json.JSONDecoder] | None = None, object_hook: Callable | None = None) -> Any"
+        description: Deserialize JSON from a file-like object to a Python object.
+        returns: Any
+        example: |
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("data.json").read_text())
+          print(data["name"])
+        tags: [json, deserialize, file]
+
+  # ---------------------------------------------------------------------------
+  # re
+  # ---------------------------------------------------------------------------
+  - module: re
+    type: stdlib
+    description: >
+      Regular expression matching operations. Uses PCRE-like syntax for
+      pattern matching, searching, and substitution in strings.
+    methods:
+      - name: match
+        signature: "re.match(pattern: str, string: str, flags: int = 0) -> re.Match | None"
+        description: >
+          Check if the beginning of the string matches the pattern. Returns a
+          Match object or None.
+        returns: "re.Match | None"
+        example: |
+          import re
+          m = re.match(r"(\d+)-(\d+)", "123-456 extra")
+          if m:
+              print(m.group(0))  # "123-456"
+              print(m.group(1))  # "123"
+              print(m.group(2))  # "456"
+        tags: [regex, match]
+
+      - name: search
+        signature: "re.search(pattern: str, string: str, flags: int = 0) -> re.Match | None"
+        description: Search the string for the first occurrence of the pattern. Returns a Match object or None.
+        returns: "re.Match | None"
+        example: |
+          import re
+          text = "Order #12345 placed on 2024-01-15"
+          m = re.search(r"#(\d+)", text)
+          if m:
+              order_id = m.group(1)  # "12345"
+        tags: [regex, search]
+
+      - name: findall
+        signature: "re.findall(pattern: str, string: str, flags: int = 0) -> list[str]"
+        description: Return all non-overlapping matches of the pattern in the string as a list.
+        returns: "list[str]"
+        example: |
+          import re
+          text = "Email: alice@test.com, bob@example.org"
+          emails = re.findall(r"[\w.+-]+@[\w-]+\.[\w.]+", text)
+          # ["alice@test.com", "bob@example.org"]
+        tags: [regex, search]
+
+      - name: finditer
+        signature: "re.finditer(pattern: str, string: str, flags: int = 0) -> Iterator[re.Match]"
+        description: Return an iterator yielding Match objects for all non-overlapping matches.
+        returns: "Iterator[re.Match]"
+        example: |
+          import re
+          text = "Prices: $10.99, $5.50, $100.00"
+          for m in re.finditer(r"\$(\d+\.\d{2})", text):
+              print(f"Found: ${m.group(1)}")
+        tags: [regex, search, iteration]
+
+      - name: sub
+        signature: "re.sub(pattern: str, repl: str | Callable, string: str, count: int = 0, flags: int = 0) -> str"
+        description: >
+          Replace occurrences of the pattern in the string. repl can be a
+          replacement string or a callable that receives a Match object.
+        returns: str
+        example: |
+          import re
+          text = "Call 555-1234 or 555-5678"
+          masked = re.sub(r"\d{3}-\d{4}", "XXX-XXXX", text)
+          # "Call XXX-XXXX or XXX-XXXX"
+
+          # Using a callable replacement
+          result = re.sub(r"\b(\w)", lambda m: m.group(1).upper(), "hello world")
+          # "Hello World"
+        tags: [regex, replace]
+
+      - name: compile
+        signature: "re.compile(pattern: str, flags: int = 0) -> re.Pattern"
+        description: >
+          Compile a regex pattern into a Pattern object for repeated use.
+          Compiled patterns are significantly faster for repeated matching.
+        returns: "re.Pattern"
+        example: |
+          import re
+          email_pattern = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+
+          # Reuse the compiled pattern
+          is_valid = bool(email_pattern.fullmatch("user@example.com"))
+          found = email_pattern.findall("Contact a@b.com or c@d.org")
+        tags: [regex, compile]
+
+      - name: split
+        signature: "re.split(pattern: str, string: str, maxsplit: int = 0, flags: int = 0) -> list[str]"
+        description: Split the string by occurrences of the pattern.
+        returns: "list[str]"
+        example: |
+          import re
+          text = "one,  two; three  four"
+          parts = re.split(r"[,;\s]+", text)
+          # ["one", "two", "three", "four"]
+        tags: [regex, split]
+
+      - name: fullmatch
+        signature: "re.fullmatch(pattern: str, string: str, flags: int = 0) -> re.Match | None"
+        description: >
+          Check if the entire string matches the pattern. Returns a Match
+          object or None. Unlike match(), it requires the pattern to match
+          the whole string.
+        returns: "re.Match | None"
+        example: |
+          import re
+          # Validate a phone number format
+          is_phone = bool(re.fullmatch(r"\d{3}-\d{4}", "555-1234"))
+          # True
+
+          is_phone = bool(re.fullmatch(r"\d{3}-\d{4}", "Call 555-1234"))
+          # False (not a full match)
+        tags: [regex, validation]
+
+  # ---------------------------------------------------------------------------
+  # datetime
+  # ---------------------------------------------------------------------------
+  - module: datetime
+    type: stdlib
+    description: >
+      Module for manipulating dates and times. Provides the datetime, date,
+      time, timedelta, and timezone classes.
+    methods:
+      - name: datetime.now
+        signature: "datetime.now(tz: timezone | None = None) -> datetime"
+        description: Return the current local date and time, optionally with timezone info.
+        returns: datetime
+        example: |
+          from datetime import datetime, timezone
+
+          now = datetime.now()
+          # datetime(2024, 1, 15, 14, 30, 45, 123456)
+
+          utc_now = datetime.now(timezone.utc)
+          # datetime(2024, 1, 15, 19, 30, 45, 123456, tzinfo=UTC)
+        tags: [datetime, current]
+
+      - name: datetime.fromisoformat
+        signature: "datetime.fromisoformat(date_string: str) -> datetime"
+        description: Create a datetime from an ISO 8601 formatted string (Python 3.7+).
+        returns: datetime
+        example: |
+          from datetime import datetime
+
+          dt = datetime.fromisoformat("2024-01-15T14:30:00+00:00")
+          # datetime(2024, 1, 15, 14, 30, tzinfo=timezone.utc)
+
+          dt = datetime.fromisoformat("2024-01-15")
+          # datetime(2024, 1, 15, 0, 0)
+        tags: [datetime, parse]
+
+      - name: datetime.strftime
+        signature: "datetime.strftime(format: str) -> str"
+        description: Format a datetime object as a string using format codes.
+        returns: str
+        example: |
+          from datetime import datetime
+
+          now = datetime.now()
+          formatted = now.strftime("%Y-%m-%d %H:%M:%S")
+          # "2024-01-15 14:30:45"
+
+          iso = now.isoformat()
+          # "2024-01-15T14:30:45.123456"
+        tags: [datetime, format]
+
+      - name: timedelta
+        signature: "timedelta(days: int = 0, seconds: int = 0, microseconds: int = 0, milliseconds: int = 0, minutes: int = 0, hours: int = 0, weeks: int = 0) -> timedelta"
+        description: >
+          Represent a duration (difference between two datetime values).
+          Used for date arithmetic.
+        returns: timedelta
+        example: |
+          from datetime import datetime, timedelta
+
+          now = datetime.now()
+          tomorrow = now + timedelta(days=1)
+          one_hour_ago = now - timedelta(hours=1)
+          next_week = now + timedelta(weeks=1)
+
+          # Calculate age in days
+          birthday = datetime(1990, 6, 15)
+          age_days = (now - birthday).days
+        tags: [datetime, arithmetic]
+
+      - name: date.today
+        signature: "date.today() -> date"
+        description: Return the current local date.
+        returns: date
+        example: |
+          from datetime import date
+
+          today = date.today()
+          # date(2024, 1, 15)
+
+          if today.weekday() >= 5:
+              print("It's the weekend!")
+        tags: [datetime, current]
+
+  # ---------------------------------------------------------------------------
+  # collections
+  # ---------------------------------------------------------------------------
+  - module: collections
+    type: stdlib
+    description: >
+      High-performance container datatypes including defaultdict, Counter,
+      deque, namedtuple, and OrderedDict.
+    methods:
+      - name: defaultdict
+        signature: "collections.defaultdict(default_factory: Callable[[], V] | None = None, **kwargs: Any) -> defaultdict[K, V]"
+        description: >
+          A dict subclass that calls a factory function to supply missing
+          values. Avoids KeyError for missing keys.
+        returns: "defaultdict[K, V]"
+        example: |
+          from collections import defaultdict
+
+          # Group items by category
+          groups: defaultdict[str, list[str]] = defaultdict(list)
+          items = [("fruit", "apple"), ("veggie", "carrot"), ("fruit", "banana")]
+
+          for category, item in items:
+              groups[category].append(item)
+          # {"fruit": ["apple", "banana"], "veggie": ["carrot"]}
+        tags: [collections, dict, default]
+
+      - name: Counter
+        signature: "collections.Counter(iterable: Iterable | Mapping | None = None, /, **kwargs: int) -> Counter"
+        description: >
+          A dict subclass for counting hashable objects. Supports arithmetic
+          operations for combining counters.
+        returns: Counter
+        example: |
+          from collections import Counter
+
+          text = "abracadabra"
+          letter_counts = Counter(text)
+          # Counter({'a': 5, 'b': 2, 'r': 2, 'c': 1, 'd': 1})
+
+          # Most common elements
+          top_3 = letter_counts.most_common(3)
+          # [('a', 5), ('b', 2), ('r', 2)]
+
+          # Combine counters
+          c1 = Counter(a=3, b=1)
+          c2 = Counter(a=1, b=2)
+          combined = c1 + c2
+          # Counter({'a': 4, 'b': 3})
+        tags: [collections, counting]
+
+      - name: deque
+        signature: "collections.deque(iterable: Iterable[T] | None = None, maxlen: int | None = None) -> deque[T]"
+        description: >
+          A double-ended queue supporting O(1) appends and pops from both
+          ends. Optionally bounded with maxlen.
+        returns: "deque[T]"
+        example: |
+          from collections import deque
+
+          # Bounded history buffer
+          history: deque[str] = deque(maxlen=5)
+          for i in range(10):
+              history.append(f"action_{i}")
+          # deque(['action_5', 'action_6', 'action_7', 'action_8', 'action_9'])
+
+          # Queue operations
+          queue: deque[int] = deque()
+          queue.append(1)      # Add to right
+          queue.appendleft(0)  # Add to left
+          queue.pop()          # Remove from right
+          queue.popleft()      # Remove from left
+        tags: [collections, queue, stack]
+
+      - name: namedtuple
+        signature: "collections.namedtuple(typename: str, field_names: str | Iterable[str], *, rename: bool = False, defaults: Iterable | None = None, module: str | None = None) -> type[tuple]"
+        description: >
+          Create a tuple subclass with named fields for improved readability.
+          Returns a new class that can be used to create instances.
+        returns: "type[tuple]"
+        example: |
+          from collections import namedtuple
+
+          Point = namedtuple("Point", ["x", "y"])
+          p = Point(x=3, y=4)
+          print(p.x, p.y)  # 3 4
+          print(p[0], p[1])  # 3 4 (still indexable)
+
+          # With defaults
+          Color = namedtuple("Color", ["r", "g", "b", "alpha"], defaults=[255])
+          c = Color(128, 64, 32)
+          # Color(r=128, g=64, b=32, alpha=255)
+        tags: [collections, tuple, namedtuple]
+
+      - name: OrderedDict
+        signature: "collections.OrderedDict(*args: Any, **kwargs: Any) -> OrderedDict[K, V]"
+        description: >
+          A dict subclass that remembers insertion order. Since Python 3.7
+          regular dicts also maintain insertion order, but OrderedDict provides
+          additional methods like move_to_end().
+        returns: "OrderedDict[K, V]"
+        example: |
+          from collections import OrderedDict
+
+          # LRU cache simulation
+          cache: OrderedDict[str, str] = OrderedDict()
+          cache["a"] = "alpha"
+          cache["b"] = "beta"
+          cache["c"] = "gamma"
+
+          # Move most recently used to end
+          cache.move_to_end("a")
+          # OrderedDict([('b', 'beta'), ('c', 'gamma'), ('a', 'alpha')])
+
+          # Evict oldest entry
+          cache.popitem(last=False)
+          # ('b', 'beta')
+        tags: [collections, dict, ordered]
+
+  # ---------------------------------------------------------------------------
+  # itertools
+  # ---------------------------------------------------------------------------
+  - module: itertools
+    type: stdlib
+    description: >
+      Module providing iterator building blocks for efficient looping.
+      Functions return lazy iterators that produce items on demand.
+    methods:
+      - name: chain
+        signature: "itertools.chain(*iterables: Iterable[T]) -> chain[T]"
+        description: >
+          Chain multiple iterables into a single sequence. Lazily yields items
+          from the first iterable, then the second, and so on.
+        returns: "chain[T]"
+        example: |
+          from itertools import chain
+
+          list_a = [1, 2, 3]
+          list_b = [4, 5, 6]
+          list_c = [7, 8, 9]
+
+          combined = list(chain(list_a, list_b, list_c))
+          # [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+          # Flatten nested lists
+          nested = [[1, 2], [3, 4], [5]]
+          flat = list(chain.from_iterable(nested))
+          # [1, 2, 3, 4, 5]
+        tags: [itertools, combine, iteration]
+
+      - name: product
+        signature: "itertools.product(*iterables: Iterable[T], repeat: int = 1) -> product"
+        description: >
+          Compute the Cartesian product of input iterables. Equivalent to
+          nested for-loops.
+        returns: product
+        example: |
+          from itertools import product
+
+          suits = ["hearts", "diamonds"]
+          ranks = ["A", "K", "Q"]
+          cards = list(product(suits, ranks))
+          # [('hearts', 'A'), ('hearts', 'K'), ('hearts', 'Q'),
+          #  ('diamonds', 'A'), ('diamonds', 'K'), ('diamonds', 'Q')]
+
+          # With repeat for self-product
+          bits = list(product([0, 1], repeat=3))
+          # [(0,0,0), (0,0,1), (0,1,0), (0,1,1),
+          #  (1,0,0), (1,0,1), (1,1,0), (1,1,1)]
+        tags: [itertools, combinatorics]
+
+      - name: combinations
+        signature: "itertools.combinations(iterable: Iterable[T], r: int) -> combinations"
+        description: >
+          Return all r-length subsequences of elements from the iterable.
+          Order does not matter and elements are not repeated.
+        returns: combinations
+        example: |
+          from itertools import combinations
+
+          items = ["A", "B", "C", "D"]
+          pairs = list(combinations(items, 2))
+          # [('A', 'B'), ('A', 'C'), ('A', 'D'),
+          #  ('B', 'C'), ('B', 'D'), ('C', 'D')]
+        tags: [itertools, combinatorics]
+
+      - name: permutations
+        signature: "itertools.permutations(iterable: Iterable[T], r: int | None = None) -> permutations"
+        description: >
+          Return all r-length permutations of elements from the iterable.
+          Order matters and elements are not repeated.
+        returns: permutations
+        example: |
+          from itertools import permutations
+
+          items = [1, 2, 3]
+          perms = list(permutations(items, 2))
+          # [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3, 2)]
+        tags: [itertools, combinatorics]
+
+      - name: groupby
+        signature: "itertools.groupby(iterable: Iterable[T], key: Callable[[T], K] | None = None) -> groupby"
+        description: >
+          Group consecutive elements from the iterable by a key function.
+          The input must be sorted by the same key for correct grouping.
+        returns: groupby
+        example: |
+          from itertools import groupby
+
+          data = [
+              {"dept": "eng", "name": "Alice"},
+              {"dept": "eng", "name": "Bob"},
+              {"dept": "sales", "name": "Charlie"},
+              {"dept": "sales", "name": "Diana"},
+          ]
+
+          # Group by department (input must be sorted by the key)
+          for dept, members in groupby(data, key=lambda x: x["dept"]):
+              names = [m["name"] for m in members]
+              print(f"{dept}: {', '.join(names)}")
+        tags: [itertools, grouping]
+
+      - name: islice
+        signature: "itertools.islice(iterable: Iterable[T], stop: int) -> islice"
+        description: >
+          Return an iterator that yields selected items from the iterable.
+          Works with any iterable including infinite generators.
+        returns: islice
+        example: |
+          from itertools import islice
+
+          # First 5 items from a generator
+          def fibonacci():
+              a, b = 0, 1
+              while True:
+                  yield a
+                  a, b = b, a + b
+
+          first_10 = list(islice(fibonacci(), 10))
+          # [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+
+          # Slice with start and stop
+          items = list(range(20))
+          middle = list(islice(items, 5, 10))
+          # [5, 6, 7, 8, 9]
+        tags: [itertools, slicing]
+
+      - name: accumulate
+        signature: "itertools.accumulate(iterable: Iterable[T], func: Callable[[T, T], T] = operator.add, *, initial: T | None = None) -> accumulate"
+        description: >
+          Return an iterator that yields accumulated sums (or accumulated
+          results of a binary function).
+        returns: accumulate
+        example: |
+          from itertools import accumulate
+          import operator
+
+          # Running total
+          data = [1, 2, 3, 4, 5]
+          running = list(accumulate(data))
+          # [1, 3, 6, 10, 15]
+
+          # Running maximum
+          data = [3, 1, 4, 1, 5, 9, 2]
+          running_max = list(accumulate(data, max))
+          # [3, 3, 4, 4, 5, 9, 9]
+
+          # Running product
+          running_prod = list(accumulate(data, operator.mul))
+          # [3, 3, 12, 12, 60, 540, 1080]
+        tags: [itertools, accumulation]
+
+      - name: starmap
+        signature: "itertools.starmap(func: Callable[..., T], iterable: Iterable[tuple]) -> starmap"
+        description: >
+          Apply a function to arguments obtained from the iterable, where each
+          iterable element is unpacked as function arguments.
+        returns: starmap
+        example: |
+          from itertools import starmap
+
+          # Unpack argument tuples
+          pairs = [(2, 3), (4, 5), (6, 7)]
+          products = list(starmap(lambda x, y: x * y, pairs))
+          # [6, 20, 42]
+
+          # With pow
+          bases_and_exps = [(2, 10), (3, 3), (10, 2)]
+          results = list(starmap(pow, bases_and_exps))
+          # [1024, 27, 100]
+        tags: [itertools, apply]

@@ -1,0 +1,184 @@
+# Python Language Metadata
+# Code standards reference for Python 3.13
+
+language:
+  name: Python
+  version: "3.13"
+  website: https://www.python.org
+  repo: https://github.com/python/cpython
+  description: >
+    Python is a high-level, general-purpose programming language known for its
+    readability, simplicity, and extensive standard library. It supports multiple
+    programming paradigms and emphasizes code readability with its use of
+    significant indentation.
+
+  paradigms:
+    - object-oriented
+    - functional
+    - imperative
+    - procedural
+
+  typeSystem:
+    kind: dynamic
+    description: >
+      Python uses dynamic typing with optional type hints (PEP 484). Variables
+      are not bound to a specific type at declaration time. Type hints provide
+      documentation and enable static analysis tools like mypy and pyright, but
+      they are not enforced at runtime.
+    features:
+      - dynamic typing
+      - optional type hints (PEP 484)
+      - duck typing
+      - gradual typing
+      - generics (PEP 585, 3.10+)
+      - TypeVar and ParamSpec for advanced typing
+      - TypeAlias (PEP 613, 3.10+)
+      - TypeGuard (PEP 647, 3.10+)
+
+  quickReference:
+    variableDeclaration: |
+      # Simple assignment (no type declaration needed)
+      name = "Alice"
+      age = 30
+      items = [1, 2, 3]
+
+      # With type hints (annotations)
+      name: str = "Alice"
+      age: int = 30
+      items: list[int] = [1, 2, 3]
+
+      # Multiple assignment
+      x, y, z = 1, 2, 3
+
+      # Unpacking
+      first, *rest = [1, 2, 3, 4, 5]
+      # first = 1, rest = [2, 3, 4, 5]
+
+    functionDeclaration: |
+      # Basic function
+      def greet(name: str) -> str:
+          """Return a greeting for the given name."""
+          return f"Hello, {name}!"
+
+      # With default parameters
+      def greet(name: str, greeting: str = "Hello") -> str:
+          return f"{greeting}, {name}!"
+
+      # With *args and **kwargs
+      def process(*args: int, **kwargs: str) -> None:
+          for arg in args:
+              print(arg)
+          for key, value in kwargs.items():
+              print(f"{key}={value}")
+
+      # Lambda expression
+      square = lambda x: x ** 2
+      add = lambda x, y: x + y
+
+    classDeclaration: |
+      # Basic class
+      class Animal:
+          """A base class for animals."""
+
+          def __init__(self, name: str, sound: str) -> None:
+              self.name = name
+              self.sound = sound
+
+          def speak(self) -> str:
+              return f"{self.name} says {self.sound}"
+
+      # Inheritance
+      class Dog(Animal):
+          def __init__(self, name: str) -> None:
+              super().__init__(name, "Woof")
+
+          def fetch(self, item: str) -> str:
+              return f"{self.name} fetches the {item}"
+
+    importStatement: |
+      # Import entire module
+      import os
+      import json
+      from pathlib import Path
+
+      # Import specific items
+      from typing import Optional, Union, TypeVar
+      from collections import defaultdict, Counter
+
+      # Import with alias
+      import numpy as np
+      from datetime import datetime as dt
+
+      # Relative imports (within a package)
+      from . import sibling_module
+      from .sibling import function_name
+      from ..parent_module import something
+
+    errorHandling: |
+      # Try/except/else/finally
+      try:
+          result = int(user_input)
+      except ValueError as e:
+          print(f"Invalid number: {e}")
+      except (TypeError, AttributeError):
+          print("Type or attribute error occurred")
+      else:
+          print(f"Successfully parsed: {result}")
+      finally:
+          print("This always executes")
+
+      # Custom exception
+      class ValidationError(Exception):
+          def __init__(self, field: str, message: str) -> None:
+              self.field = field
+              self.message = message
+              super().__init__(f"{field}: {message}")
+
+      # Raising exceptions
+      if value < 0:
+          raise ValueError("Value must be non-negative")
+
+    asyncPattern: |
+      import asyncio
+
+      # Async function
+      async def fetch_data(url: str) -> dict:
+          async with aiohttp.ClientSession() as session:
+              async with session.get(url) as response:
+                  return await response.json()
+
+      # Running async code
+      async def main() -> None:
+          # Sequential
+          data = await fetch_data("https://api.example.com")
+
+          # Concurrent with gather
+          urls = ["https://a.com", "https://b.com", "https://c.com"]
+          results = await asyncio.gather(
+              *(fetch_data(url) for url in urls)
+          )
+
+          # Creating tasks
+          task = asyncio.create_task(fetch_data("https://api.example.com"))
+          result = await task
+
+      asyncio.run(main())
+
+  versionFeatures:
+    "3.10":
+      - match/case structural pattern matching
+      - Parenthesized context managers
+      - Better error messages
+    "3.11":
+      - Exception groups and except*
+      - TaskGroups for asyncio
+      - Fine-grained error locations in tracebacks
+    "3.12":
+      - Type parameter syntax (PEP 695)
+      - f-string improvements (PEP 701)
+      - Per-interpreter GIL (PEP 684)
+    "3.13":
+      - Improved interactive interpreter
+      - Incremental garbage collection
+      - Experimental free-threaded mode (no-GIL)
+      - Experimental JIT compiler

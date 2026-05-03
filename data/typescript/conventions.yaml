@@ -1,0 +1,468 @@
+# TypeScript Conventions
+# Code Standards Plugin - Coding Conventions and Rules
+
+conventions:
+
+  # =========================================================================
+  # Variable Declarations
+  # =========================================================================
+
+  - id: prefer-const
+    rule: "Use const by default; only use let when reassignment is necessary."
+    severity: error
+    rationale: >
+      Const declarations make code easier to reason about by signaling that a
+      binding will not be reassigned. This prevents accidental mutations and
+      communicates intent clearly.
+    tags: [variables, readability, safety]
+    good:
+      example: |
+        const MAX_RETRIES = 3;
+        const apiUrl = "https://api.example.com";
+        const users = fetchUsers();
+
+        // Use let only when reassignment is needed
+        let count = 0;
+        for (const item of items) {
+          if (item.isActive) {
+            count++;
+          }
+        }
+    bad:
+      example: |
+        // Avoid: const could be used here
+        let MAX_RETRIES = 3;
+        let apiUrl = "https://api.example.com";
+        let users = fetchUsers();
+
+        // Avoid: var is function-scoped and hoisted
+        var count = 0;
+
+  - id: no-var
+    rule: "Never use var. Use const or let instead."
+    severity: error
+    rationale: >
+      var has function-level scoping and hoisting behavior that leads to
+      subtle bugs. const and let have block-level scoping which is more
+      predictable and aligns with modern JavaScript semantics.
+    tags: [variables, safety]
+    good:
+      example: |
+        function process(items: string[]): void {
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            console.log(item);
+          }
+        }
+    bad:
+      example: |
+        function process(items: string[]): void {
+          for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            console.log(item);
+          }
+          // i and item leak into function scope
+        }
+
+  # =========================================================================
+  # Type Safety
+  # =========================================================================
+
+  - id: strict-null-checks
+    rule: "Enable strictNullChecks and handle null/undefined explicitly."
+    severity: error
+    rationale: >
+      Strict null checks prevent null reference errors, which are one of the
+      most common sources of runtime crashes. Always handle nullable types
+      explicitly with optional chaining, nullish coalescing, or explicit checks.
+    tags: [types, safety, null-safety]
+    good:
+      example: |
+        interface User {
+          name: string;
+          address?: Address;
+        }
+
+        function getCity(user: User): string {
+          // Optional chaining + nullish coalescing
+          return user.address?.city ?? "Unknown";
+        }
+
+        // Explicit null check with early return
+        function processUser(user: User | null): string {
+          if (!user) {
+            return "No user provided";
+          }
+          return user.name.toUpperCase();
+        }
+    bad:
+      example: |
+        // Avoid: non-null assertion operator when value could be null
+        function getCity(user: User): string {
+          return user.address!.city; // Runtime crash if address is undefined
+        }
+
+        // Avoid: implicit any from untyped null
+        let data = null; // inferred as null, not useful
+        data = fetchSomething(); // error: Type 'X' is not assignable to null
+
+  - id: prefer-interfaces
+    rule: "Prefer interfaces over type aliases for object shapes."
+    severity: warn
+    rationale: >
+      Interfaces provide better error messages, can be extended with declaration
+      merging, and are more performant for the compiler when used with large
+      object types. Use type aliases for unions, intersections, and non-object
+      types.
+    tags: [types, readability]
+    good:
+      example: |
+        // Use interface for object shapes
+        interface User {
+          id: string;
+          name: string;
+          email: string;
+        }
+
+        interface AdminUser extends User {
+          permissions: string[];
+        }
+
+        // Use type for unions, primitives, and computed types
+        type Status = "active" | "inactive" | "banned";
+        type UserMap = Record<string, User>;
+        type ReadonlyUser = Readonly<User>;
+    bad:
+      example: |
+        // Avoid: type alias for plain object shapes
+        type User = {
+          id: string;
+          name: string;
+          email: string;
+        };
+
+        // Cannot use declaration merging with type
+        type User = {
+          // Error: Duplicate identifier
+          phone: string;
+        };
+
+  - id: discriminated-unions
+    rule: "Use discriminated unions instead of optional properties for variant types."
+    severity: warn
+    rationale: >
+      Discriminated unions provide exhaustive type checking and make invalid
+      states unrepresentable. They enable TypeScript to narrow types correctly
+      in switch statements and conditional checks.
+    tags: [types, safety, patterns]
+    good:
+      example: |
+        // Discriminated union - each variant is a complete type
+        type Result<T> =
+          | { success: true; data: T }
+          | { success: false; error: Error };
+
+        function handle<T>(result: Result<T>): T {
+          if (result.success) {
+            return result.data; // narrowed to T
+          }
+          throw result.error; // narrowed to Error
+        }
+
+        // Network state with discriminated union
+        type NetworkState =
+          | { status: "idle" }
+          | { status: "loading" }
+          | { status: "success"; data: unknown[] }
+          | { status: "error"; message: string };
+    bad:
+      example: |
+        // Avoid: optional properties allow invalid states
+        type Result<T> = {
+          success: boolean;
+          data?: T;      // data present when success is false? Unclear.
+          error?: Error;  // error present when success is true? Unclear.
+        };
+
+        // This is valid but logically wrong
+        const bad: Result<string> = {
+          success: true,
+          error: new Error("oops"), // shouldn't be here
+        };
+
+  - id: explicit-return-types
+    rule: "Add explicit return types to exported and public functions."
+    severity: warn
+    rationale: >
+      Explicit return types serve as documentation, catch unintentional return
+      type changes, and improve IDE performance. They are especially important
+      for public APIs and module boundaries.
+    tags: [types, documentation, api-design]
+    good:
+      example: |
+        export function calculateTotal(items: CartItem[]): number {
+          return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        }
+
+        export async function fetchUser(id: string): Promise<User | null> {
+          const response = await fetch(`/api/users/${id}`);
+          if (!response.ok) return null;
+          return response.json() as Promise<User>;
+        }
+    bad:
+      example: |
+        // Avoid: inferred return type may change unexpectedly
+        export function calculateTotal(items: CartItem[]) {
+          return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        }
+
+  # =========================================================================
+  # Error Handling
+  # =========================================================================
+
+  - id: throw-error-objects
+    rule: "Always throw Error objects, not strings or other primitives."
+    severity: error
+    rationale: >
+      Error objects provide stack traces for debugging and can be extended with
+      custom properties. Throwing strings loses stack trace information and
+      makes error handling inconsistent.
+    tags: [errors, debugging, safety]
+    good:
+      example: |
+        // Custom error hierarchy
+        class AppError extends Error {
+          constructor(
+            message: string,
+            public readonly code: string,
+            public readonly statusCode: number = 500,
+          ) {
+            super(message);
+            this.name = this.constructor.name;
+          }
+        }
+
+        class NotFoundError extends AppError {
+          constructor(resource: string, id: string) {
+            super(`${resource} with id ${id} not found`, "NOT_FOUND", 404);
+          }
+        }
+
+        class ValidationError extends AppError {
+          constructor(
+            message: string,
+            public readonly fields: Record<string, string[]>,
+          ) {
+            super(message, "VALIDATION_ERROR", 422);
+          }
+        }
+
+        // Usage
+        function findUser(id: string): User {
+          const user = db.get(id);
+          if (!user) {
+            throw new NotFoundError("User", id);
+          }
+          return user;
+        }
+    bad:
+      example: |
+        // Avoid: throwing strings
+        throw "Something went wrong";
+        throw `User ${id} not found`;
+
+        // Avoid: throwing plain objects
+        throw { message: "Error", code: 500 };
+
+  - id: no-empty-catch
+    rule: "Never leave catch blocks empty. At minimum, log the error."
+    severity: error
+    rationale: >
+      Silently swallowing errors makes debugging extremely difficult. Errors
+      should always be handled, logged, or re-thrown.
+    tags: [errors, debugging]
+    good:
+      example: |
+        try {
+          await saveToFile(path, data);
+        } catch (error) {
+          logger.error("Failed to save file", { path, error });
+          throw new AppError("File save failed", "SAVE_ERROR", 500);
+        }
+
+        // If intentionally ignoring, document why
+        try {
+          await cleanupTempFiles();
+        } catch {
+          // Temp files may not exist; cleanup is best-effort
+        }
+    bad:
+      example: |
+        // Avoid: silent error swallowing
+        try {
+          await saveToFile(path, data);
+        } catch (error) {
+          // empty
+        }
+
+        // Avoid: catching without handling
+        try {
+          await saveToFile(path, data);
+        } catch {}
+
+  # =========================================================================
+  # Naming Conventions
+  # =========================================================================
+
+  - id: naming-conventions
+    rules:
+      variablesAndFunctions:
+        convention: camelCase
+        severity: error
+        description: "Use camelCase for variables, functions, and parameters."
+        example: |
+          const userName = "Alice";
+          const isActive = true;
+
+          function calculateTotal(items: CartItem[]): number {
+            return items.reduce((sum, item) => sum + item.price, 0);
+          }
+
+          async function fetchUserData(userId: string): Promise<User> {
+            // ...
+          }
+
+      classesAndInterfaces:
+        convention: PascalCase
+        severity: error
+        description: "Use PascalCase for classes, interfaces, types, and enums."
+        example: |
+          class UserService {
+            // ...
+          }
+
+          interface UserProfile {
+            // ...
+          }
+
+          type NetworkStatus = "online" | "offline" | "unknown";
+
+          enum LogLevel {
+            DEBUG = "DEBUG",
+            INFO = "INFO",
+            WARN = "WARN",
+            ERROR = "ERROR",
+          }
+
+      constants:
+        convention: UPPER_SNAKE_CASE
+        severity: warn
+        description: "Use UPPER_SNAKE_CASE for true constants and environment variables."
+        example: |
+          const MAX_RETRY_COUNT = 3;
+          const API_BASE_URL = "https://api.example.com";
+          const DEFAULT_TIMEOUT_MS = 5000;
+
+          // Environment variables
+          const DATABASE_URL = process.env.DATABASE_URL;
+
+      privateMembers:
+        convention: prefix with underscore or use private keyword
+        severity: warn
+        description: "Use the private keyword or # prefix for private class members."
+        example: |
+          class UserService {
+            private cache = new Map<string, User>();
+
+            async getUser(id: string): Promise<User> {
+              if (this.cache.has(id)) {
+                return this.cache.get(id)!;
+              }
+              const user = await this.db.findUser(id);
+              this.cache.set(id, user);
+              return user;
+            }
+          }
+
+      booleanVariables:
+        convention: "Prefix with is, has, can, should, was"
+        severity: warn
+        description: "Use descriptive prefixes for boolean variables."
+        example: |
+          const isEnabled = true;
+          const hasPermission = checkPermission(user);
+          const canEdit = hasPermission && isOwner;
+          const shouldRetry = attemptCount < MAX_RETRIES;
+          const wasProcessed = results.includes(item.id);
+
+      typeParameters:
+        convention: "Single uppercase letter or PascalCase with T prefix"
+        severity: info
+        description: "Use T for single type params, descriptive names for multiple."
+        example: |
+          // Single parameter
+          function identity<T>(value: T): T {
+            return value;
+          }
+
+          // Multiple parameters - use descriptive names
+          function map<TInput, TOutput>(
+            input: TInput,
+            mapper: (value: TInput) => TOutput,
+          ): TOutput {
+            return mapper(input);
+          }
+
+          // Constrained parameters
+          function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
+            return obj[key];
+          }
+
+  # =========================================================================
+  # Import Ordering
+  # =========================================================================
+
+  - id: import-ordering
+    rule: "Organize imports in a consistent order with blank line separators."
+    severity: warn
+    rationale: >
+      Consistent import ordering makes it easy to scan dependencies and
+      understand a module's external requirements at a glance.
+    tags: [imports, readability, organization]
+    order:
+      - "1. Node.js built-in modules (node:*)"
+      - "2. External packages (npm modules)"
+      - "3. Internal aliases (@/*, ~/*)"
+      - "4. Parent directory imports (../)"
+      - "5. Current directory imports (./)"
+      - "6. Type-only imports (last in each group)"
+    good:
+      example: |
+        // 1. Node built-ins
+        import { readFile, writeFile } from "node:fs/promises";
+        import path from "node:path";
+
+        // 2. External packages
+        import express, { type Request, type Response } from "express";
+        import { z } from "zod";
+        import { PrismaClient } from "@prisma/client";
+
+        // 3. Internal aliases
+        import { config } from "@/config";
+        import { Logger } from "@/infrastructure/logger";
+
+        // 4. Parent directory
+        import { BaseService } from "../base-service";
+
+        // 5. Current directory
+        import { validateUser } from "./validation";
+        import type { UserDTO } from "./types";
+    bad:
+      example: |
+        // Avoid: mixed ordering with no separation
+        import { validateUser } from "./validation";
+        import express from "express";
+        import { config } from "@/config";
+        import { readFile } from "node:fs/promises";
+        import { BaseService } from "../base-service";
+        import { z } from "zod";

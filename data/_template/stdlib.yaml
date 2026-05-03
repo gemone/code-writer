@@ -1,0 +1,60 @@
+# Standard Library Template
+# Copy this file to data/<language>/stdlib.yaml and fill in the details
+
+version: 1
+modules:
+  - name: "" # TODO: Module name (e.g., "fs", "os", "collections")
+    description: "" # TODO: Brief description of the module
+    category: "" # TODO: Category (e.g., "io", "data-structures", "networking")
+
+    functions:
+      - name: "" # TODO: Function name (e.g., "readFile")
+        signature: "" # TODO: Function signature (e.g., "readFile(path: string): Promise<string>")
+        description: "" # TODO: What the function does
+        parameters:
+          - name: "" # TODO: Parameter name
+            type: "" # TODO: Parameter type
+            description: "" # TODO: Parameter description
+            required: true # TODO: Is the parameter required?
+            default: null # TODO: Default value if optional
+        returns:
+          type: "" # TODO: Return type
+          description: "" # TODO: What is returned
+        examples:
+          - code: "" # TODO: Example code
+            description: "" # TODO: What the example demonstrates
+        throws: [] # TODO: Possible exceptions/errors
+        since: "" # TODO: Version when introduced (if known)
+        deprecated: false # TODO: Is this function deprecated?
+
+      # Example entry:
+      - name: "readFile"
+        signature: "readFile(path: string, encoding?: string): Promise<string>"
+        description: "Reads the entire contents of a file asynchronously."
+        parameters:
+          - name: "path"
+            type: "string"
+            description: "Path to the file to read"
+            required: true
+          - name: "encoding"
+            type: "string"
+            description: "Character encoding (e.g., 'utf-8')"
+            required: false
+            default: "utf-8"
+        returns:
+          type: "Promise<string>"
+          description: "The file contents as a string"
+        examples:
+          - code: |
+              const content = await fs.readFile('/path/to/file.txt');
+              console.log(content);
+            description: "Read a file with default encoding"
+          - code: |
+              const content = await fs.readFile('/path/to/file.txt', 'latin1');
+              console.log(content);
+            description: "Read a file with specific encoding"
+        throws:
+          - "FileNotFoundError"
+          - "PermissionError"
+        since: "1.0.0"
+        deprecated: false

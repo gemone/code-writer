@@ -1,0 +1,228 @@
+# TypeScript Language Metadata
+# Code Standards Plugin - Language Reference
+
+language:
+  name: TypeScript
+  version: "5.7"
+  website: https://www.typescriptlang.org
+  repo: https://github.com/microsoft/TypeScript
+  description: >
+    TypeScript is a strongly typed programming language that builds on JavaScript,
+    giving you better tooling at any scale. It adds optional static types, classes,
+    and modules to JavaScript, enabling developers to catch errors early and deliver
+    more robust code.
+  license: Apache-2.0
+  fileExtensions:
+    - .ts
+    - .tsx
+    - .mts
+    - .cts
+    - .d.ts
+    - .d.mts
+    - .d.cts
+  paradigms:
+    - object-oriented
+    - functional
+    - imperative
+    - event-driven
+  typeSystem:
+    - static
+    - structural
+    - inference
+    - generics
+    - nullSafety
+  runtime: JavaScript (Node.js, Deno, Bun, browsers)
+  transpiler: tsc (official), esbuild, swc, Babel
+  packageManager: npm, yarn, pnpm, bun
+
+  quickReference:
+
+    variableDeclaration:
+      description: "Declare variables with const, let, or var. Prefer const by default."
+      example: |
+        // Primitive types
+        const name: string = "Alice";
+        const age: number = 30;
+        const isActive: boolean = true;
+
+        // Type inference - explicit annotation often unnecessary
+        const count = 42; // inferred as number
+        let items = [1, 2, 3]; // inferred as number[]
+
+        // Union types
+        let value: string | number = "hello";
+        value = 42;
+
+        // Type assertions
+        const input = document.getElementById("input") as HTMLInputElement;
+
+        // Const assertions
+        const config = {
+          apiUrl: "https://api.example.com",
+          retries: 3,
+        } as const;
+
+    functionDeclaration:
+      description: "Declare functions with typed parameters and return types."
+      example: |
+        // Named function with explicit types
+        function greet(name: string, greeting: string = "Hello"): string {
+          return `${greeting}, ${name}!`;
+        }
+
+        // Arrow function with inferred return type
+        const double = (n: number) => n * 2;
+
+        // Generic function
+        function identity<T>(value: T): T {
+          return value;
+        }
+
+        // Function overloads
+        function parse(input: string): object;
+        function parse(input: Buffer): object;
+        function parse(input: string | Buffer): object {
+          const raw = typeof input === "string" ? input : input.toString();
+          return JSON.parse(raw);
+        }
+
+        // Rest parameters
+        function sum(...numbers: number[]): number {
+          return numbers.reduce((acc, n) => acc + n, 0);
+        }
+
+    classDeclaration:
+      description: "Declare classes with access modifiers, inheritance, and implementation."
+      example: |
+        interface Serializable {
+          serialize(): string;
+        }
+
+        abstract class Animal {
+          constructor(
+            protected readonly name: string,
+            private _age: number,
+          ) {}
+
+          get age(): number {
+            return this._age;
+          }
+
+          abstract speak(): string;
+        }
+
+        class Dog extends Animal implements Serializable {
+          constructor(
+            name: string,
+            age: number,
+            private breed: string,
+          ) {
+            super(name, age);
+          }
+
+          speak(): string {
+            return `${this.name} says: Woof!`;
+          }
+
+          serialize(): string {
+            return JSON.stringify({ name: this.name, age: this.age, breed: this.breed });
+          }
+        }
+
+    importStatement:
+      description: "Import modules, types, and values from other files or packages."
+      example: |
+        // Default import
+        import express from "express";
+
+        // Named imports
+        import { readFile, writeFile } from "node:fs/promises";
+
+        // Type-only import
+        import type { Request, Response } from "express";
+
+        // Namespace import
+        import * as path from "node:path";
+
+        // Aliased import
+        import { Component as ReactComponent } from "react";
+
+        // Side-effect import
+        import "./polyfills";
+
+        // Dynamic import (async)
+        const module = await import("./heavy-module");
+
+        // Re-export
+        export { default as UserService } from "./user-service";
+        export type { User, UserRole } from "./types";
+
+    errorHandling:
+      description: "Handle errors with try/catch, typed catch, and custom error classes."
+      example: |
+        // Custom error class
+        class AppError extends Error {
+          constructor(
+            message: string,
+            public readonly code: string,
+            public readonly statusCode: number = 500,
+          ) {
+            super(message);
+            this.name = "AppError";
+          }
+        }
+
+        // Try/catch with typed catch (TS 4.0+)
+        async function fetchUser(id: string): Promise<User> {
+          try {
+            const response = await fetch(`/api/users/${id}`);
+            if (!response.ok) {
+              throw new AppError(`User ${id} not found`, "USER_NOT_FOUND", 404);
+            }
+            return response.json() as Promise<User>;
+          } catch (error) {
+            if (error instanceof AppError) {
+              console.error(`[${error.code}] ${error.message}`);
+            }
+            throw error;
+          }
+        }
+
+    asyncPattern:
+      description: "Asynchronous patterns using async/await and Promises."
+      example: |
+        // Async function with typed return
+        async function loadData(url: string): Promise<Data> {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return response.json() as Promise<Data>;
+        }
+
+        // Parallel execution
+        const [users, posts, comments] = await Promise.all([
+          fetchUsers(),
+          fetchPosts(),
+          fetchComments(),
+        ]);
+
+        // Sequential with error resilience
+        const results = await Promise.allSettled([
+          fetchFromPrimary(),
+          fetchFromFallback(),
+        ]);
+        const successful = results
+          .filter((r): r is PromiseFulfilledResult<Data> => r.status === "fulfilled")
+          .map((r) => r.value);
+
+        // Async iteration
+        async function* paginate(baseUrl: string): AsyncGenerator<Item[]> {
+          let page = 1;
+          while (true) {
+            const items = await fetchPage(baseUrl, page);
+            if (items.length === 0) break;
+            yield items;
+            page++;
+          }
+        }

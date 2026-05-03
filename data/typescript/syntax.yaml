@@ -1,0 +1,548 @@
+# TypeScript Syntax Guide
+# Code Standards Plugin - Syntax Reference
+
+syntax:
+
+  variablesAndTypes:
+
+    typeAnnotations:
+      description: "Explicit type annotations for variables and constants."
+      example: |
+        // Primitive annotations
+        const title: string = "TypeScript Guide";
+        const version: number = 5.7;
+        const isReady: boolean = true;
+        const nothing: null = null;
+        const undef: undefined = undefined;
+        const uniqueId: unique symbol = Symbol("id");
+        const big: bigint = 100n;
+
+        // Object type annotation
+        const point: { x: number; y: number } = { x: 10, y: 20 };
+
+        // Array annotations
+        const numbers: number[] = [1, 2, 3];
+        const names: Array<string> = ["Alice", "Bob"];
+
+        // Tuple annotations
+        const pair: [string, number] = ["age", 30];
+        const triple: [first: string, second: number, third: boolean] = ["a", 1, true];
+
+    unionAndIntersection:
+      description: "Combine types with union (|) and intersection (&)."
+      example: |
+        // Union types - value can be one of several types
+        type StringOrNumber = string | number;
+        type Status = "pending" | "active" | "completed" | "failed";
+
+        // Discriminated unions
+        type Shape =
+          | { kind: "circle"; radius: number }
+          | { kind: "rectangle"; width: number; height: number }
+          | { kind: "triangle"; base: number; height: number };
+
+        function area(shape: Shape): number {
+          switch (shape.kind) {
+            case "circle":
+              return Math.PI * shape.radius ** 2;
+            case "rectangle":
+              return shape.width * shape.height;
+            case "triangle":
+              return (shape.base * shape.height) / 2;
+          }
+        }
+
+        // Intersection types - combine multiple types into one
+        type WithTimestamp = { createdAt: Date; updatedAt: Date };
+        type WithId = { id: string };
+        type Entity = WithId & WithTimestamp;
+
+        type UserEntity = Entity & {
+          name: string;
+          email: string;
+        };
+
+    generics:
+      description: "Parameterized types for reusable, type-safe abstractions."
+      example: |
+        // Generic interface
+        interface Repository<T> {
+          findById(id: string): Promise<T | null>;
+          findAll(filter?: Partial<T>): Promise<T[]>;
+          create(data: Omit<T, "id">): Promise<T>;
+          update(id: string, data: Partial<T>): Promise<T>;
+          delete(id: string): Promise<void>;
+        }
+
+        // Generic with constraints
+        interface Comparable<T> {
+          compareTo(other: T): number;
+        }
+
+        function sortItems<T extends Comparable<T>>(items: T[]): T[] {
+          return [...items].sort((a, b) => a.compareTo(b));
+        }
+
+        // Multiple type parameters
+        interface Mapper<TInput, TOutput> {
+          map(input: TInput): TOutput;
+        }
+
+        // Generic with default type
+        interface ApiResponse<TData = unknown, TError = Error> {
+          data?: TData;
+          error?: TError;
+          status: number;
+        }
+
+        // Conditional types
+        type IsString<T> = T extends string ? true : false;
+        type A = IsString<string>; // true
+        type B = IsString<number>; // false
+
+        // Mapped types
+        type ReadonlyDeep<T> = {
+          readonly [K in keyof T]: T[K] extends object ? ReadonlyDeep<T[K]> : T[K];
+        };
+
+    utilityTypes:
+      description: "Built-in utility types for common type transformations."
+      example: |
+        interface User {
+          id: string;
+          name: string;
+          email: string;
+          password: string;
+          role: "admin" | "user";
+          createdAt: Date;
+        }
+
+        // Partial - all properties optional
+        type UserUpdate = Partial<User>;
+
+        // Required - all properties required
+        type RequiredUser = Required<UserUpdate>;
+
+        // Pick - select specific properties
+        type UserProfile = Pick<User, "id" | "name" | "email">;
+
+        // Omit - exclude specific properties
+        type UserWithoutPassword = Omit<User, "password">;
+
+        // Record - construct object type
+        type UserRoles = Record<string, "admin" | "user" | "moderator">;
+
+        // Exclude / Extract from union
+        type NonAdminRole = Exclude<User["role"], "admin">; // "user"
+        type AdminRole = Extract<User["role"], "admin">; // "admin"
+
+        // ReturnType / Parameters
+        function createUser(name: string, email: string): User {
+          /* ... */
+          return {} as User;
+        }
+        type CreateUserReturn = ReturnType<typeof createUser>; // User
+        type CreateUserParams = Parameters<typeof createUser>; // [string, string]
+
+        // Awaited - unwrap Promise type
+        type ResolvedUser = Awaited<Promise<User>>; // User
+
+        // NonNullable
+        type SafeValue = NonNullable<string | null | undefined>; // string
+
+  functions:
+
+    signatures:
+      description: "Function type signatures and callable interfaces."
+      example: |
+        // Function type alias
+        type Comparator<T> = (a: T, b: T) => number;
+
+        // Callable interface
+        interface Predicate<T> {
+          (value: T): boolean;
+        }
+
+        // Using function types
+        const stringComparator: Comparator<string> = (a, b) => a.localeCompare(b);
+        const isPositive: Predicate<number> = (n) => n > 0;
+
+        // Generic function types
+        type Factory<T> = (config: Record<string, unknown>) => T;
+        type AsyncHandler<T> = (req: Request) => Promise<T>;
+
+    overloads:
+      description: "Function overloads for multiple call signatures."
+      example: |
+        // Overload signatures
+        function createElement(tag: "a"): HTMLAnchorElement;
+        function createElement(tag: "div"): HTMLDivElement;
+        function createElement(tag: "input"): HTMLInputElement;
+        function createElement(tag: string): HTMLElement;
+        function createElement(tag: string): HTMLElement {
+          return document.createElement(tag);
+        }
+
+        // Overloaded constructor pattern
+        class DateRange {
+          start: Date;
+          end: Date;
+
+          constructor(start: Date, end: Date);
+          constructor(start: string, end: string);
+          constructor(start: Date | string, end: Date | string) {
+            this.start = typeof start === "string" ? new Date(start) : start;
+            this.end = typeof end === "string" ? new Date(end) : end;
+          }
+        }
+
+    arrowFunctions:
+      description: "Arrow function syntax with type annotations."
+      example: |
+        // Basic arrow function
+        const add = (a: number, b: number): number => a + b;
+
+        // Generic arrow function
+        const identity = <T>(value: T): T => value;
+
+        // Arrow function in array methods
+        const evens = numbers.filter((n): boolean => n % 2 === 0);
+        const doubled = numbers.map((n): number => n * 2);
+
+        // Arrow function with destructured params
+        const getFullName = ({ first, last }: { first: string; last: string }): string =>
+          `${first} ${last}`;
+
+    restAndDefault:
+      description: "Rest parameters and default parameter values."
+      example: |
+        // Rest parameters
+        function log(level: string, ...messages: unknown[]): void {
+          console.log(`[${level}]`, ...messages);
+        }
+
+        // Default parameters
+        function createUrl(
+          host: string,
+          port: number = 443,
+          protocol: string = "https",
+        ): string {
+          return `${protocol}://${host}:${port}`;
+        }
+
+        // Default with computed values
+        function createId(prefix: string = "id", seed: number = Date.now()): string {
+          return `${prefix}-${seed.toString(36)}`;
+        }
+
+  controlFlow:
+
+    ifAndSwitch:
+      description: "Conditional statements with type-safe patterns."
+      example: |
+        // Type guard with typeof
+        function process(input: string | number): string {
+          if (typeof input === "string") {
+            return input.toUpperCase(); // narrowed to string
+          }
+          return input.toFixed(2); // narrowed to number
+        }
+
+        // Truthiness narrowing
+        function greet(name: string | null | undefined): string {
+          if (name) {
+            return `Hello, ${name}`; // narrowed to string
+          }
+          return "Hello, stranger";
+        }
+
+        // Switch with literal types
+        type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+
+        function describeMethod(method: HttpMethod): string {
+          switch (method) {
+            case "GET":
+              return "Retrieve a resource";
+            case "POST":
+              return "Create a resource";
+            case "PUT":
+              return "Replace a resource";
+            case "DELETE":
+              return "Remove a resource";
+          }
+        }
+
+    typeNarrowing:
+      description: "Type narrowing through guards, assertions, and control flow."
+      example: |
+        // Custom type guard
+        function isUser(value: unknown): value is User {
+          return (
+            typeof value === "object" &&
+            value !== null &&
+            "id" in value &&
+            "email" in value
+          );
+        }
+
+        // Assertion function
+        function assertDefined<T>(
+          value: T | null | undefined,
+          message: string,
+        ): asserts value is T {
+          if (value === null || value === undefined) {
+            throw new Error(message);
+          }
+        }
+
+        // Using assertion
+        function getLength(value: string | null): number {
+          assertDefined(value, "Value must not be null");
+          return value.length; // narrowed to string
+        }
+
+        // Discriminated union narrowing
+        type Result<T> =
+          | { success: true; data: T }
+          | { success: false; error: Error };
+
+        function handleResult<T>(result: Result<T>): T {
+          if (result.success) {
+            return result.data; // narrowed to success branch
+          }
+          throw result.error; // narrowed to failure branch
+        }
+
+    exhaustiveSwitch:
+      description: "Exhaustive switch using never to ensure all cases are handled."
+      example: |
+        type Shape =
+          | { kind: "circle"; radius: number }
+          | { kind: "rectangle"; width: number; height: number }
+          | { kind: "triangle"; base: number; height: number };
+
+        // Exhaustive check helper
+        function assertNever(value: never): never {
+          throw new Error(`Unhandled case: ${JSON.stringify(value)}`);
+        }
+
+        function perimeter(shape: Shape): number {
+          switch (shape.kind) {
+            case "circle":
+              return 2 * Math.PI * shape.radius;
+            case "rectangle":
+              return 2 * (shape.width + shape.height);
+            case "triangle":
+              return shape.base + shape.height + Math.hypot(shape.base / 2, shape.height);
+            default:
+              // Compile-time error if a case is missed
+              return assertNever(shape);
+          }
+        }
+
+  classes:
+
+    constructors:
+      description: "Class constructors with parameter properties and initialization."
+      example: |
+        // Parameter properties shorthand
+        class User {
+          constructor(
+            public readonly id: string,
+            public name: string,
+            private email: string,
+            protected role: string = "user",
+          ) {}
+        }
+
+        // Constructor with validation
+        class Email {
+          readonly value: string;
+
+          constructor(value: string) {
+            if (!Email.isValid(value)) {
+              throw new Error(`Invalid email: ${value}`);
+            }
+            this.value = value.toLowerCase().trim();
+          }
+
+          private static isValid(email: string): boolean {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+          }
+        }
+
+        // Private constructor (singleton)
+        class Database {
+          private static instance: Database;
+
+          private constructor(private connectionString: string) {}
+
+          static getInstance(connStr: string): Database {
+            if (!Database.instance) {
+              Database.instance = new Database(connStr);
+            }
+            return Database.instance;
+          }
+        }
+
+    accessModifiers:
+      description: "Public, private, protected, and readonly access modifiers."
+      example: |
+        class BankAccount {
+          public owner: string; // accessible anywhere
+          protected balance: number; // accessible in subclasses
+          private pin: string; // accessible only in this class
+          readonly accountNumber: string; // cannot be reassigned after construction
+
+          constructor(owner: string, pin: string, initialBalance: number = 0) {
+            this.owner = owner;
+            this.pin = pin;
+            this.balance = initialBalance;
+            this.accountNumber = BankAccount.generateAccountNumber();
+          }
+
+          // Private method
+          private validatePin(input: string): boolean {
+            return this.pin === input;
+          }
+
+          // Public method accessing private/protected
+          withdraw(amount: number, pin: string): boolean {
+            if (!this.validatePin(pin)) return false;
+            if (amount > this.balance) return false;
+            this.balance -= amount;
+            return true;
+          }
+
+          private static generateAccountNumber(): string {
+            return `ACCT-${Date.now().toString(36).toUpperCase()}`;
+          }
+        }
+
+    abstractAndImplements:
+      description: "Abstract classes and interface implementation."
+      example: |
+        // Interface definition
+        interface Logger {
+          info(message: string): void;
+          error(message: string, error?: Error): void;
+          warn(message: string): void;
+        }
+
+        interface Transport {
+          send(level: string, message: string): Promise<void>;
+        }
+
+        // Abstract base class
+        abstract class BaseLogger implements Logger {
+          protected abstract transport: Transport;
+
+          constructor(protected prefix: string) {}
+
+          info(message: string): void {
+            this.log("INFO", message);
+          }
+
+          error(message: string, error?: Error): void {
+            this.log("ERROR", `${message}${error ? `: ${error.message}` : ""}`);
+          }
+
+          warn(message: string): void {
+            this.log("WARN", message);
+          }
+
+          private async log(level: string, message: string): Promise<void> {
+            const formatted = `[${this.prefix}] ${level}: ${message}`;
+            await this.transport.send(level, formatted);
+          }
+        }
+
+        // Concrete implementation
+        class ConsoleLogger extends BaseLogger {
+          protected transport: Transport = {
+            async send(_level, message) {
+              console.log(message);
+            },
+          };
+
+          constructor(prefix: string) {
+            super(prefix);
+          }
+        }
+
+  modules:
+
+    importExport:
+      description: "ES module import and export patterns."
+      example: |
+        // ---- math.ts ----
+
+        // Named exports
+        export function add(a: number, b: number): number {
+          return a + b;
+        }
+
+        export function multiply(a: number, b: number): number {
+          return a * b;
+        }
+
+        // Default export
+        export default class Calculator {
+          add = add;
+          multiply = multiply;
+        }
+
+        // Type export
+        export type Operation = (a: number, b: number) => number;
+
+        // ---- app.ts ----
+
+        import Calculator, { add, multiply, type Operation } from "./math";
+
+    dynamicImport:
+      description: "Dynamic imports for code splitting and lazy loading."
+      example: |
+        // Lazy module loading
+        async function loadHeavyModule() {
+          const { processData } = await import("./heavy-processing");
+          return processData;
+        }
+
+        // Conditional import
+        async function getStorage() {
+          if (typeof window !== "undefined") {
+            const { BrowserStorage } = await import("./storage/browser");
+            return new BrowserStorage();
+          }
+          const { FileStorage } = await import("./storage/file");
+          return new FileStorage();
+        }
+
+        // Dynamic import with type assertion
+        async function loadPlugin(name: string): Promise<Plugin> {
+          const module = (await import(`./plugins/${name}`)) as { default: Plugin };
+          return module.default;
+        }
+
+    reExports:
+      description: "Re-exporting modules for barrel files and public APIs."
+      example: |
+        // ---- index.ts (barrel file) ----
+
+        // Re-export named items
+        export { UserService } from "./services/user-service";
+        export { PostService } from "./services/post-service";
+
+        // Re-export types
+        export type { User, UserRole } from "./models/user";
+        export type { Post, PostStatus } from "./models/post";
+
+        // Re-export everything from a module
+        export * from "./utils";
+        export * from "./errors";
+
+        // Re-export with alias
+        export { Logger as AppLogger } from "./infrastructure/logger";
+
+        // Re-export default as named
+        export { default as Config } from "./config";
