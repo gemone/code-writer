@@ -164,6 +164,15 @@ language:
 
       asyncio.run(main())
 
+  sources:
+    stdlib:
+      - pattern: "/usr/lib/python{version}/*.py"
+      - pattern: "**/.venv/lib/python{version}/*.py"
+      - pattern: "/usr/local/lib/python{version}/*.py"
+    docs:
+      - url: "https://docs.python.org/3/library/"
+        scope: "stdlib"
+
   versionFeatures:
     "3.10":
       - match/case structural pattern matching

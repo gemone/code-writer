@@ -1,11 +1,9 @@
 import Database from 'better-sqlite3';
 import path from 'node:path';
 import fs from 'node:fs';
+import { APP_DIR } from './constants.js';
 
-const DEFAULT_DB_DIR = path.join(
-  process.env.HOME || process.env.USERPROFILE || '.',
-  '.code-writer'
-);
+const DEFAULT_DB_DIR = APP_DIR;
 
 export class DatabaseManager {
   private db: Database.Database;

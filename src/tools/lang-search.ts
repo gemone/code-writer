@@ -1,6 +1,13 @@
 import type { QueryEngine } from '../engine/query.js';
+import type { VectorStore } from '../engine/vector-store.js';
+import type { EmbeddingProvider } from '../engine/embedding.js';
+import { tryVectorSearch } from './vector-search.js';
 
-export function createLangSearchTool(queryEngine: QueryEngine) {
+export function createLangSearchTool(
+  queryEngine: QueryEngine,
+  vectorStore: VectorStore | null,
+  embedding: EmbeddingProvider | null,
+) {
   return {
     name: 'lang_search' as const,
     description: 'Full-text search across all language data. Returns matching stdlib APIs, syntax examples, conventions, and patterns.',
@@ -15,10 +22,34 @@ export function createLangSearchTool(queryEngine: QueryEngine) {
       required: ['query'],
     },
     handler: async (args: { query: string; language?: string; category?: string; limit?: number }) => {
+      const lang = args.language?.toLowerCase();
+      const category = args.category || 'all';
+      const limit = args.limit || 5;
+
+      if (category === 'stdlib' || category === 'all') {
+        const vectorText = await tryVectorSearch(vectorStore, embedding, args.query, {
+          language: lang,
+          source: category === 'stdlib' ? 'stdlib' : undefined,
+          limit,
+        }, hits => {
+          let text = `# Search Results for "${args.query}"\n\n`;
+          for (const { document: doc, score } of hits) {
+            text += `## [${doc.source}] ${doc.name} (${doc.language})\n`;
+            text += `Module: ${doc.module}\n\n`;
+            if (doc.signature) text += `Signature: \`${doc.signature}\`\n\n`;
+            text += `${doc.description}\n\n`;
+            if (doc.code) text += `\`\`\`\n${doc.code}\n\`\`\`\n\n`;
+            text += `Score: ${score.toFixed(3)}\n\n---\n\n`;
+          }
+          return text;
+        });
+        if (vectorText) return { content: [{ type: 'text' as const, text: vectorText }] };
+      }
+
       const results = queryEngine.search(args.query, {
-        language: args.language?.toLowerCase(),
-        category: (args.category as 'stdlib' | 'syntax' | 'conventions' | 'patterns' | 'all') || 'all',
-        limit: args.limit || 5,
+        language: lang,
+        category: category as 'stdlib' | 'syntax' | 'conventions' | 'patterns' | 'all',
+        limit,
       });
 
       if (results.length === 0) {

@@ -1,95 +1,734 @@
-# Zig Syntax Guide
-# Minimal seed — use lang_fetch to populate comprehensive data
+# Zig Syntax Guide (v0.16.0)
+# Comprehensive syntax reference
 
 version: "1"
 syntax:
   - category: "variables"
-    description: "Variable declarations, types, and optionals"
+    description: "Variable declarations, types, optionals, and constants"
     sections:
       - name: "Variable Declaration"
-        description: "Use const for immutable, var for mutable. SCREAMING_SNAKE for comptime constants."
-        syntax: "const name: Type = value;\nvar name: Type = value;"
+        description: "Use const for immutable bindings, var for mutable. Type inference is default. SCREAMING_SNAKE for comptime-known constants."
+        syntax: |
+          const name: Type = value;
+          var name: Type = value;
+          const name = value;  // type inferred
         examples:
           - code: |
               const x: u32 = 42;
-              const name = "zig"; // inferred
+              const name = "zig"; // inferred as *const [3:0]u8
               var counter: u32 = 0;
+              const MAX_SIZE: usize = 1024; // comptime-known
             description: "Basic declarations"
+          - code: |
+              // Underscore to discard
+              _ = try risky_operation();
+
+              // Destructure tuple/struct
+              const Point = struct { x: f64, y: f64 };
+              const p = Point{ .x = 1.0, .y = 2.0 };
+            description: "Discard and struct init"
         notes:
           - "Use const by default, var only when mutation is needed"
           - "SCREAMING_SNAKE_CASE for comptime-known constants"
+          - "Variables must be used or explicitly discarded with _"
 
-  - category: "functions"
-    description: "Function declarations and error unions"
-    sections:
-      - name: "Function Declaration"
-        description: "Functions with fn keyword. Parameters immutable. Use !Type for error unions."
-        syntax: "fn name(param: Type) ReturnType { ... }"
+      - name: "Primitive Types"
+        description: "Zig has explicit integer and float types. No implicit conversions between different widths."
+        syntax: |
+          // Integers: iN, uN (N = 0..65535)
+          i8, i16, i32, i64, i128
+          u8, u16, u32, u64, u128
+          isize, usize  // pointer-sized
+
+          // Floats: f16, f32, f64, f80, f128
+          // Boolean
+          bool
+          // Platform-dependent
+          c_char, c_short, c_int, c_long, c_longlong
         examples:
           - code: |
-              fn add(a: i32, b: i32) i32 { return a + b; }
+              const a: u8 = 255;
+              const b: i32 = -1000;
+              const pi: f64 = 3.14159265358979;
+              const flag: bool = true;
+              const size: usize = @sizeOf(Point);
+            description: "Primitive type usage"
+        notes:
+          - "No implicit narrowing or widening conversions"
+          - "Use @intCast, @floatCast, @intFromFloat, @floatFromInt for explicit conversions"
+
+      - name: "Optional Types"
+        description: "Optionals use ?T syntax. null is the absent value. Unwrap with if, orelse, or .?."
+        syntax: |
+          var maybe: ?T = null;
+          maybe = value;
+          if (maybe) |val| { /* val is T */ }
+          const val = maybe orelse default;
+          const val = maybe.?; // panic if null
+        examples:
+          - code: |
+              var maybe: ?u32 = null;
+              maybe = 42;
+
+              // Safe unwrap
+              if (maybe) |val| {
+                  std.debug.print("{d}\n", .{val});
+              }
+
+              // Default value
+              const val = maybe orelse 0;
+
+              // Panic on null
+              const val = maybe.?;
+
+              // Optional pointer — no extra memory for null
+              const ptr: ?*u32 = null;
+          - description: "Optional patterns"
+        notes:
+          - "?*T is same size as *T (null uses address 0)"
+          - "?T for value types adds a null byte"
+
+  - category: "functions"
+    description: "Function declarations, error unions, generics, and calling conventions"
+    sections:
+      - name: "Function Declaration"
+        description: "Functions use fn keyword. Parameters are immutable by default. Use !T for error unions."
+        syntax: |
+          fn name(param: Type) ReturnType { ... }
+          fn name(param: Type) !Type { ... }  // error union
+          fn name(comptime T: type, param: T) T { ... }  // generic
+        examples:
+          - code: |
+              // Basic
+              fn add(a: i32, b: i32) i32 {
+                  return a + b;
+              }
+
+              // Error union
               fn read_file(alloc: Allocator, path: []const u8) ![]u8 {
                   const file = try std.fs.cwd().openFile(path, .{});
                   defer file.close();
                   return try file.readToEndAlloc(alloc, 1024 * 1024);
               }
-            description: "Basic and error-returning functions"
-        notes:
-          - "try propagates errors, catch handles them"
 
-  - category: "control-flow"
-    description: "for, while, and switch"
-    sections:
-      - name: "Loops and Iteration"
-        description: "for iterates over slices and ranges. while with continue expression."
-        syntax: "for (items) |item| { ... }\nwhile (cond) : (expr) { ... }"
+              // Generic via comptime
+              fn max(comptime T: type, a: T, b: T) T {
+                  return if (a > b) a else b;
+              }
+
+              // Discarding return
+              _ = add(1, 2);
+            description: "Function patterns"
+        notes:
+          - "Error unions use !T syntax — the error set is inferred"
+          - "try propagates errors, catch handles them"
+          - "comptime parameters are monomorphized at compile time"
+
+      - name: "Error Unions and Error Sets"
+        description: "Errors are values in error sets. Error union T!E for fallible operations."
+        syntax: |
+          const ErrorSet = error{ Err1, Err2 };
+          fn foo() ErrorSet!ReturnType { ... }
+          fn bar() !ReturnType { ... }  // inferred error set
         examples:
           - code: |
-              for (items) |item| { process(item); }
-              for (0..10) |i| { std.debug.print("{d}\n", .{i}); }
-              var i: u32 = 0;
-              while (i < 10) : (i += 1) { /* ... */ }
-            description: "for and while loops"
-        notes:
-          - "if works as expression: const x = if (c) a else b;"
-          - "switch is exhaustive for enums and tagged unions"
+              const ParseError = error{ InvalidInput, Overflow };
 
-  - category: "structs"
-    description: "Structs and tagged unions"
+              fn parse(s: []const u8) ParseError!u32 {
+                  return std.fmt.parseInt(u32, s, 10);
+              }
+
+              // Propagate
+              const n = try parse("42");
+
+              // Handle
+              const n = parse("abc") catch |err| {
+                  std.debug.print("error: {}\n", .{err});
+                  return err;
+              };
+
+              // Default on error
+              const n = parse("abc") catch 0;
+
+              // Exhaustive switch
+              parse(input) catch |err| switch (err) {
+                  error.InvalidInput => return 0,
+                  error.Overflow => return std.math.maxInt(u32),
+              }
+            description: "Error handling patterns"
+        notes:
+          - "catch can provide default: `expr catch 0`"
+          - "errdefer runs only on error return path"
+          - "anyerror is the universal error set"
+
+      - name: "Defer and Errdefer"
+        description: "defer runs on scope exit. errdefer runs only on error return."
+        syntax: |
+          defer expression;
+          errdefer expression;
+          errdefer |err| expression;  // capture error
+        examples:
+          - code: |
+              fn process(alloc: Allocator) !void {
+                  const buf = try alloc.alloc(u8, 1024);
+                  defer alloc.free(buf);       // always runs
+
+                  const tmp = try alloc.alloc(u8, 512);
+                  errdefer alloc.free(tmp);    // only on error
+
+                  const result = try riskyOperation(tmp);
+                  // tmp is freed only if riskyOperation fails
+                  // buf is always freed
+                  return result;
+              }
+
+              // Error capture
+              fn guarded(captured: *?anyerror) !void {
+                  errdefer |err| { captured.* = err; }
+                  return error.GeneralFailure;
+              }
+            description: "Resource cleanup with defer"
+        notes:
+          - "defers execute in reverse order (LIFO)"
+          - "errdefer can capture the error value for logging"
+
+  - category: "control-flow"
+    description: "if/else, for, while, switch, labeled blocks"
     sections:
-      - name: "Struct Declaration"
-        description: "Value types with methods as self-parameter functions."
-        syntax: "const Name = struct { field: Type, ... };"
+      - name: "If/Else"
+        description: "if works as both statement and expression. Supports optional unwrapping and error handling."
+        syntax: |
+          if (condition) { ... } else { ... }
+          const x = if (c) a else b;  // expression
+          if (optional) |val| { ... }
+          if (error_union) |val| { ... } else |err| { ... }
+        examples:
+          - code: |
+              // Expression
+              const label = if (x > 0) "positive" else "non-positive";
+
+              // Optional unwrap
+              if (maybe_value) |val| {
+                  use(val);
+              }
+
+              // Error union
+              if (parse(input)) |n| {
+                  handle(n);
+              } else |err| {
+                  std.debug.print("error: {}\n", .{err});
+              }
+            description: "if/else patterns"
+
+      - name: "For Loops"
+        description: "for iterates over slices, arrays, and ranges. Supports captures for value and index."
+        syntax: |
+          for (items) |item| { ... }
+          for (items, 0..) |item, i| { ... }
+          for (0..n) |i| { ... }
+          for (&items) |*item| { ... }  // mutable reference
+        examples:
+          - code: |
+              // Iterate items
+              for (items) |item| { process(item); }
+
+              // With index
+              for (items, 0..) |item, i| {
+                  std.debug.print("[{d}] = {d}\n", .{i, item});
+              }
+
+              // Range
+              for (0..10) |i| {
+                  std.debug.print("{d}\n", .{i});
+              }
+
+              // Mutable
+              for (&items) |*item| {
+                  item.* += 1;
+              }
+
+              // Multi-object
+              for (keys, values) |k, v| {
+                  try map.put(gpa, k, v);
+              }
+
+              // Early break with label
+              var found: ?usize = null;
+              for (items, 0..) |item, i| {
+                  if (item == target) {
+                      found = i;
+                      break;
+                  }
+              }
+            description: "for loop patterns"
+        notes:
+          - "0..n range syntax added in 0.11"
+          - "Use &items to get mutable references"
+
+      - name: "While Loops"
+        description: "while with optional continue expression. Supports optional and error union unwrapping."
+        syntax: |
+          while (cond) { ... }
+          while (cond) : (continue_expr) { ... }
+          while (optional) |val| { ... }
+        examples:
+          - code: |
+              // Basic
+              var i: u32 = 0;
+              while (i < 10) : (i += 1) {
+                  process(i);
+              }
+
+              // Optional unwrapping
+              var it = iterator();
+              while (it.next()) |item| {
+                  process(item);
+              }
+
+              // Continue expression for cleanup
+              var n: u32 = 10;
+              while (n > 0) : (n -= 1) {
+                  if (skip(n)) continue;
+                  process(n);
+              }
+            description: "while loop patterns"
+
+      - name: "Switch"
+        description: "Exhaustive matching for enums, error sets, and tagged unions. No fallthrough."
+        syntax: |
+          switch (value) {
+              Pattern1 => result1,
+              Pattern2, Pattern3 => result2,
+              else => default,
+          }
+        examples:
+          - code: |
+              // Enum matching
+              switch (direction) {
+                  .north => "up",
+                  .south => "down",
+                  .east, .west => "sideways",
+              }
+
+              // Tagged union
+              switch (value) {
+                  .integer => |n| std.debug.print("{d}\n", .{n}),
+                  .float => |f| std.debug.print("{d}\n", .{f}),
+                  .string => |s| std.debug.print("{s}\n", .{s}),
+              }
+
+              // Error set
+              result catch |err| switch (err) {
+                  error.Overflow => handle_overflow(),
+                  error.InvalidInput => handle_invalid(),
+                  else => return err,
+              }
+
+              // Range patterns
+              switch (x) {
+                  0...9 => std.debug.print("single digit\n"),
+                  10...99 => std.debug.print("double digit\n"),
+                  else => std.debug.print("large\n"),
+              }
+            description: "switch patterns"
+        notes:
+          - "switch is exhaustive — must cover all cases or use else"
+          - "0.16: packed struct/union may be used as switch prong items"
+
+      - name: "Labeled Blocks and Break"
+        description: "Blocks can be labeled. break returns a value from a block."
+        syntax: |
+          blk: {
+              break :blk value;
+          }
+        examples:
+          - code: |
+              const result = blk: {
+                  const a = try computeA();
+                  const b = try computeB();
+                  break :blk a + b;
+              };
+
+              // Labeled loop for breaking outer loop
+              outer: for (matrix) |row| {
+                  for (row) |elem| {
+                      if (elem == 0) break :outer;
+                  }
+              }
+            description: "Labeled blocks and break"
+
+  - category: "types"
+    description: "Structs, enums, unions, arrays, slices, and pointers"
+    sections:
+      - name: "Structs"
+        description: "Value types with fields and methods. Methods are functions with self parameter. PascalCase naming."
+        syntax: |
+          const Name = struct {
+              field: Type,
+              pub fn method(self: Name) ReturnType { ... }
+          };
         examples:
           - code: |
               const Point = struct {
                   x: f64,
                   y: f64,
+
+                  pub fn init(x: f64, y: f64) Point {
+                      return .{ .x = x, .y = y };
+                  }
+
                   pub fn distance(self: Point, other: Point) f64 {
-                      return @sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2);
+                      const dx = self.x - other.x;
+                      const dy = self.y - other.y;
+                      return @sqrt(dx * dx + dy * dy);
                   }
               };
-            description: "Struct with method"
-        notes:
-          - "Structs are value types (copied on assignment)"
 
-  - category: "error-handling"
-    description: "Error unions and defer"
-    sections:
-      - name: "Error Unions"
-        description: "Errors are values in error unions (error!T). Use try/catch and defer."
-        syntax: "!Type // error union\ntry expr // propagate\ncatch |err| handler // handle"
+              const p = Point.init(1.0, 2.0);
+              const d = p.distance(Point{ .x = 3.0, .y = 4.0 });
+            description: "Struct with init and method"
+
+      - name: "Enums"
+        description: "Enums map names to integer values. Can specify backing type. Non-exhaustive with _ tag."
+        syntax: |
+          const Name = enum { tag1, tag2 };
+          const Name = enum(u8) { tag1 = 1, tag2 = 2 };
+          const Name = enum(u8) { tag1, tag2, _ };  // non-exhaustive
         examples:
           - code: |
-              const result = try risky_operation();
-              const fallback = risky_operation() catch |err| {
-                  std.debug.print("error: {}\n", .{err});
-                  return err;
+              const Direction = enum {
+                  north, south, east, west,
+
+                  pub fn opposite(self: Direction) Direction {
+                      return switch (self) {
+                          .north => .south,
+                          .south => .north,
+                          .east => .west,
+                          .west => .east,
+                      };
+                  }
               };
-              // defer for cleanup
-              const buf = try alloc.alloc(u8, 1024);
-              defer alloc.free(buf);
-            description: "Error handling and defer"
+
+              const d: Direction = .north;
+              std.debug.print("{d}\n", .{@intFromEnum(d)}); // 0
+            description: "Enum with method"
+
+      - name: "Tagged Unions"
+        description: "Unions with enum tag for type-safe variant types. switch to destructure."
+        syntax: |
+          const Name = union(enum) {
+              tag1: Type1,
+              tag2: Type2,
+          };
+        examples:
+          - code: |
+              const Value = union(enum) {
+                  integer: i64,
+                  float: f64,
+                  string: []const u8,
+                  null_val,
+
+                  pub fn truthy(self: Value) bool {
+                      return switch (self) {
+                          .integer => |n| n != 0,
+                          .float => |f| f != 0.0,
+                          .string => |s| s.len > 0,
+                          .null_val => false,
+                      };
+                  }
+              };
+
+              var v: Value = .{ .integer = 42 };
+              v = .{ .string = "hello" };
+            description: "Tagged union with method"
+
+      - name: "Packed Structs and Unions"
+        description: "In-memory layout guaranteed. Explicit backing integer. No pointers allowed in 0.16."
+        syntax: |
+          const Name = packed struct(u8) { field: u4, field2: u4 };
+          const Name = packed union(u16) { a: u16, b: packed struct { lo: u8, hi: u8 } };
+        examples:
+          - code: |
+              const Flags = packed struct(u8) {
+                  read: bool,
+                  write: bool,
+                  execute: bool,
+                  _padding: u5 = 0,
+              };
+
+              const f: Flags = .{ .read = true, .write = false, .execute = true };
+              const raw: u8 = @bitCast(f);
+            description: "Packed struct"
         notes:
-          - "catch can provide default: `expr catch 0`"
-          - "errdefer runs only on error path"
+          - "0.16: Explicit backing integer required for extern types"
+          - "0.16: Pointers forbidden in packed structs and unions"
+
+      - name: "Arrays and Slices"
+        description: "Fixed-size arrays [N]T and dynamic slices []T. Sentinel-terminated variants [N:s]T and [:s]T."
+        syntax: |
+          var arr: [N]T = .{ val, val, ... };
+          const slice: []T = &arr;
+          const sentinel: [:0]u8 = "hello";  // null-terminated
+        examples:
+          - code: |
+              // Array
+              var arr: [5]u32 = .{ 1, 2, 3, 4, 5 };
+              const len = arr.len; // 5
+
+              // Slice
+              const slice: []const u32 = arr[1..3]; // [2, 3]
+
+              // Sentinel-terminated
+              const str: [:0]const u8 = "hello";
+              const c_str: [*:0]const u8 = str.ptr; // C string
+
+              // Multi-array literal
+              const matrix = [2][3]u32{
+                  .{ 1, 2, 3 },
+                  .{ 4, 5, 6 },
+              };
+            description: "Arrays and slices"
+
+      - name: "Pointers"
+        description: "Single-item *T, many-item [*]T, optional ?*T. Sentinel-terminated [*:0]T."
+        syntax: |
+          const ptr: *T = &variable;
+          const slice: []T = &array;
+          const opt: ?*T = null;
+          const c_str: [*:0]const u8 = "hello";
+        examples:
+          - code: |
+              var x: u32 = 42;
+              const ptr: *u32 = &x;
+              ptr.* = 100; // x is now 100
+
+              // Const pointer
+              const cptr: *const u32 = &x;
+              // cptr.* = 200; // error: const
+
+              // Slice pointer
+              var arr = [_]u32{ 1, 2, 3 };
+              const slice: []u32 = &arr;
+              slice[0] = 10;
+            description: "Pointer types"
+
+  - category: "comptime"
+    description: "Compile-time evaluation and generic programming"
+    sections:
+      - name: "Comptime Blocks"
+        description: "Code executed at compile time. Variables declared with comptime are comptime-known."
+        syntax: |
+          comptime { ... }
+          const x = comptime expression;
+          fn foo(comptime T: type, ...) T { ... }
+        examples:
+          - code: |
+              // Compile-time evaluation
+              const x = comptime fibonacci(10);
+
+              // Compile-time assertion
+              comptime {
+                  std.debug.assert(@sizeOf(u32) == 4);
+              }
+
+              // Generic function
+              fn max(comptime T: type, a: T, b: T) T {
+                  return if (a > b) a else b;
+              }
+              const m = max(u32, 10, 20); // monomorphized
+            description: "Comptime patterns"
+
+      - name: "Type Introspection"
+        description: "Use @typeInfo for compile-time type reflection. Returns tagged union of type info."
+        syntax: |
+          @typeInfo(comptime T: type) std.builtin.Type
+        examples:
+          - code: |
+              fn printFields(comptime T: type) void {
+                  const info = @typeInfo(T);
+                  switch (info) {
+                      .@"struct" => |s| {
+                          for (s.fields) |field| {
+                              std.debug.print("{s}: {}\n", .{ field.name, field.type });
+                          }
+                      },
+                      else => @compileError("expected struct"),
+                  }
+              }
+
+              // New in 0.16: type-creating builtins
+              const MyInt = @Int(.unsigned, 10); // u10
+              const MyStruct = @Struct(.auto, null,
+                  &.{ "x", "y" },
+                  &.{ f64, f64 },
+                  &@splat(std.builtin.Type.StructField.Attributes{}),
+              );
+            description: "Type introspection and creation"
+        notes:
+          - "0.16: @Type replaced with @Int, @Struct, @Union, @Enum, @Tuple, @Pointer, @Fn"
+
+  - category: "concurrency"
+    description: "I/O interface, futures, groups, and sync primitives (0.16+)"
+    sections:
+      - name: "I/O Interface (0.16+)"
+        description: "All I/O operations require an Io instance. Get from Juicy Main or create manually."
+        syntax: |
+          pub fn main(init: std.process.Init) !void {
+              const io = init.io;
+          }
+        examples:
+          - code: |
+              // Juicy Main
+              pub fn main(init: std.process.Init) !void {
+                  const gpa = init.gpa;
+                  const io = init.io;
+
+                  // File operations
+                  const file = try io.cwd().openFile("data.txt", .{});
+                  defer file.close(io);
+              }
+
+              // Manual Io (non-ideal)
+              var threaded: std.Io.Threaded = .init_single_threaded;
+              const io = threaded.io();
+
+              // Testing
+              test "io test" {
+                  const io = std.testing.io;
+              }
+            description: "Io usage patterns"
+
+      - name: "Futures and Async (0.16+)"
+        description: "io.async creates independent tasks. io.concurrent requires concurrency. Both return Future(T)."
+        syntax: |
+          var future = io.async(func, .{args});
+          const result = try future.await(io);
+          _ = future.cancel(io) catch {};
+        examples:
+          - code: |
+              // Independent tasks
+              var foo_future = io.async(fetchData, .{io, "/foo"});
+              defer _ = foo_future.cancel(io) catch {};
+              var bar_future = io.async(fetchData, .{io, "/bar"});
+              defer _ = bar_future.cancel(io) catch {};
+
+              const foo = try foo_future.await(io);
+              const bar = try bar_future.await(io);
+
+              // Group for many tasks
+              var group: std.Io.Group = .init;
+              defer group.cancel(io);
+              for (urls) |url| {
+                  group.async(io, fetchUrl, .{io, url});
+              }
+              try group.await(io);
+            description: "Future and Group patterns"
+
+      - name: "Sync Primitives (0.16+)"
+        description: "Sync primitives migrated to std.Io namespace."
+        syntax: |
+          std.Io.Mutex, std.Io.Condition, std.Io.RwLock
+          std.Io.Semaphore, std.Io.Event, std.Io.Futex
+        examples:
+          - code: |
+              var mutex: std.Io.Mutex = .{};
+              mutex.lock(io);
+              defer mutex.unlock(io);
+
+              // Condition variable
+              var cond: std.Io.Condition = .{};
+              cond.wait(io, &mutex);
+              cond.signal(io);
+              cond.broadcast(io);
+            description: "Sync primitive usage"
+        notes:
+          - "0.16: Thread.Mutex, Thread.Condition, etc. migrated to Io namespace"
+
+  - category: "testing"
+    description: "Built-in test framework"
+    sections:
+      - name: "Test Declarations"
+        description: "Tests declared with test keyword. Run with zig test."
+        syntax: |
+          test "description" { ... }
+        examples:
+          - code: |
+              test "addition" {
+                  try std.testing.expect(add(2, 3) == 5);
+                  try std.testing.expectEqual(@as(i32, 5), add(2, 3));
+              }
+
+              test "error handling" {
+                  try std.testing.expectError(
+                      error.Overflow,
+                      parseInt(u8, "256", 10),
+                  );
+              }
+
+              test "no memory leaks" {
+                  const alloc = std.testing.allocator;
+                  const buf = try alloc.alloc(u8, 100);
+                  defer alloc.free(buf);
+              }
+
+              test "io operations" {
+                  const io = std.testing.io;
+                  // test I/O-dependent code
+              }
+            description: "Test patterns"
+        notes:
+          - "std.testing.allocator detects leaks automatically"
+          - "0.16: std.testing.io provides I/O for tests"
+
+  - category: "builtins"
+    description: "Compiler builtin functions"
+    sections:
+      - name: "Common Builtins"
+        description: "Built-in functions prefixed with @. Always available."
+        syntax: |
+          @import("module")        // import module
+          @TypeOf(expr)            // get type of expression
+          @typeInfo(T)             // type reflection
+          @as(T, value)            // explicit type coercion
+          @intCast(value)          // integer width conversion
+          @floatCast(value)        // float width conversion
+          @intFromFloat(value)     // float to int
+          @floatFromInt(value)     // int to float
+          @intFromEnum(value)      // enum to int
+          @enumFromInt(T, value)   // int to enum
+          @intFromPtr(value)       // pointer to usize
+          @ptrFromInt(value)       // usize to pointer
+          @bitCast(value)          // reinterpret bits
+          @ptrCast(value)          // pointer type conversion
+          @alignCast(value)        // align pointer
+          @sizeOf(T)               // size in bytes
+          @alignOf(T)              // alignment
+          @bitSizeOf(T)            // bit size
+          @compileError(msg)       // compile error
+          @compileLog(...)         // compile-time print
+          @memset(ptr, val)        // set memory
+          @memcpy(dst, src)        // copy memory
+          @sqrt, @sin, @cos, @abs  // math operations
+        examples:
+          - code: |
+              // Type coercion
+              const x: u64 = @as(u32, 42);
+
+              // Compile-time type info
+              const fields = @typeInfo(MyStruct).@"struct".fields;
+
+              // Bit reinterpretation
+              const bits: u32 = @bitCast(3.14);
+
+              // Size information
+              comptime std.debug.assert(@sizeOf(u32) == 4);
+              comptime std.debug.assert(@bitSizeOf(u8) == 8);
+
+              // 0.16: Float-to-int via rounding builtins
+              const rounded: u8 = @round(12.5); // 13
+              const floored: u8 = @floor(12.9); // 12
+          - description: "Builtin functions"
+        notes:
+          - "0.16: @Type removed, replaced with @Int, @Struct, @Union, @Enum, @Tuple, @Pointer, @Fn"
+          - "0.16: @floor, @ceil, @round, @trunc now convert floats to integers"
+          - "0.16: @intFromFloat deprecated, use @trunc instead"

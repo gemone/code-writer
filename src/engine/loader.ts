@@ -17,13 +17,14 @@ export class LanguageLoader {
   private db: DatabaseManager;
   private dataDir: string;
   private syncTimestamps = new Map<string, number>();
+  private registryCache: LanguageRegistry | null = null;
 
   constructor(db: DatabaseManager, dataDir?: string) {
     this.db = db;
     this.dataDir = dataDir || path.resolve(__dirname, '../../data');
   }
 
-  async syncFromYaml(): Promise<void> {
+  syncFromYaml(): void {
     const registry = this.loadRegistry();
 
     for (const [langId, entry] of Object.entries(registry.languages)) {
@@ -47,9 +48,11 @@ export class LanguageLoader {
   }
 
   private loadRegistry(): LanguageRegistry {
+    if (this.registryCache) return this.registryCache;
     const indexPath = path.join(this.dataDir, 'index.yaml');
     const raw = yaml.load(fs.readFileSync(indexPath, 'utf-8')) as Record<string, unknown>;
-    return LanguageRegistrySchema.parse(raw);
+    this.registryCache = LanguageRegistrySchema.parse(raw);
+    return this.registryCache;
   }
 
   private loadAndStoreStdlib(langId: string, langDir: string): void {
@@ -133,6 +136,11 @@ export class LanguageLoader {
     if (!fs.existsSync(filePath)) return null;
     const raw = yaml.load(fs.readFileSync(filePath, 'utf-8')) as Record<string, unknown>;
     return LanguageMetaSchema.parse(raw) as Record<string, unknown>;
+  }
+
+  getRegisteredLanguages(): string[] {
+    const registry = this.loadRegistry();
+    return Object.keys(registry.languages);
   }
 
   getDataDir(): string {

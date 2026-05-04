@@ -1,11 +1,11 @@
-# Zig Design Patterns
-# Minimal seed — use lang_fetch to populate comprehensive data
+# Zig Design Patterns (v0.16.0)
+# Comprehensive pattern reference
 
 version: "1"
 language: zig
 patterns:
   # =========================================================================
-  # Error Set Pattern
+  # Error Handling Patterns
   # =========================================================================
   - name: Error Set Pattern
     category: behavioral
@@ -17,21 +17,24 @@ patterns:
       - "Any operation that can fail (I/O, parsing, allocation)"
       - "When you need to communicate specific failure modes to callers"
     example: |
-      fn readConfig(path: []const u8) !Config {
+      const ParseError = error{ InvalidInput, Overflow };
+
+      fn readConfig(alloc: Allocator, path: []const u8) !Config {
           const file = try std.fs.cwd().openFile(path, .{});
           defer file.close();
           const data = try file.readToEndAlloc(alloc, 1024 * 1024);
           defer alloc.free(data);
-          return try std.json.parseFromSlice(Config, alloc, data, .{});
+          return try std.json.parseFromSliceLeaky(Config, alloc, data, .{});
       }
 
       // Propagation
-      fn loadApp() !void {
-          const config = try readConfig("config.json");
+      fn loadApp(alloc: Allocator) !void {
+          const config = try readConfig(alloc, "config.json");
+          _ = config;
       }
 
       // Handling
-      const config = readConfig("config.json") catch |err| {
+      const config = readConfig(alloc, "config.json") catch |err| {
           std.debug.print("error: {}\n", .{err});
           return;
       };
@@ -39,8 +42,42 @@ patterns:
       - "Result Type"
       - "Railway Oriented Programming"
 
+  - name: Defer Cleanup Pattern
+    category: behavioral
+    description: >
+      Use defer for unconditional cleanup and errdefer for error-path-only cleanup.
+      Ensures resources are always freed regardless of control flow path.
+    whenToUse:
+      - "Any resource acquisition (files, memory, locks)"
+      - "When cleanup must happen on both success and error paths"
+    example: |
+      fn process(alloc: Allocator) !Result {
+          const buf = try alloc.alloc(u8, 1024);
+          defer alloc.free(buf);       // always runs
+
+          const tmp = try alloc.alloc(u8, 512);
+          errdefer alloc.free(tmp);    // only on error
+
+          const data = try fetchData(tmp);
+          // tmp NOT freed on success (returned as part of Result)
+          // buf ALWAYS freed
+
+          return Result{ .data = data };
+      }
+
+      // Error capture for logging
+      fn guarded() !void {
+          errdefer |err| {
+              std.log.err("operation failed: {}", .{err});
+          }
+          try riskyOperation();
+      }
+    relatedPatterns:
+      - "RAII"
+      - "Error Set Pattern"
+
   # =========================================================================
-  # Allocator Pattern
+  # Memory Management Patterns
   # =========================================================================
   - name: Allocator Pattern
     category: creational
@@ -53,7 +90,7 @@ patterns:
       - "Library code that should work with any allocation strategy"
       - "Code that needs leak detection in tests"
     example: |
-      fn createBuffer(alloc: std.mem.Allocator, size: usize) ![]u8 {
+      fn createBuffer(alloc: Allocator, size: usize) ![]u8 {
           const buf = try alloc.alloc(u8, size);
           errdefer alloc.free(buf);
           return buf;
@@ -72,35 +109,347 @@ patterns:
     relatedPatterns:
       - "Dependency Injection"
 
-  # =========================================================================
-  # Comptime Pattern
-  # =========================================================================
-  - name: Comptime Pattern
+  - name: Arena Pattern
     category: creational
     description: >
-      Use comptime for compile-time type parameters, validation, and generic programming.
+      Use ArenaAllocator for batch operations where all allocations share a lifetime.
+      Free everything at once with deinit(). Thread-safe in 0.16.
+    whenToUse:
+      - "CLI tools where all data lives for program lifetime"
+      - "Request handlers with clear start/end boundaries"
+      - "Parsing or processing where intermediate allocations share lifetime"
+    example: |
+      fn handleRequest(gpa: Allocator, request: Request) !Response {
+          var arena = std.heap.ArenaAllocator.init(gpa);
+          defer arena.deinit();
+          const alloc = arena.allocator();
+
+          // All allocations freed at once on arena.deinit()
+          const headers = try parseHeaders(alloc, request.raw);
+          const body = try parseBody(alloc, request.raw);
+          const params = try parseParams(alloc, request.url);
+
+          return buildResponse(headers, body, params);
+      }
+
+      // Or use Juicy Main's built-in arena
+      pub fn main(init: std.process.Init) !void {
+          const alloc = init.arena.allocator();
+          // arena lives for entire program
+      }
+    relatedPatterns:
+      - "Allocator Pattern"
+
+  # =========================================================================
+  # Generic Programming Patterns
+  # =========================================================================
+  - name: Comptime Generic Pattern
+    category: creational
+    description: >
+      Use comptime type parameters for generic data structures and functions.
       Zig monomorphizes each instantiation at compile time — no runtime dispatch or
       type erasure.
     whenToUse:
       - "Data structures that work with any type (generic containers)"
       - "Compile-time validation or computation"
+      - "Type-safe generic algorithms"
     example: |
       fn Stack(comptime T: type) type {
           return struct {
               items: std.ArrayList(T),
+
               pub fn init(alloc: Allocator) @This() {
                   return .{ .items = std.ArrayList(T).init(alloc) };
               }
-              pub fn push(self: *@This(), value: T) !void {
-                  try self.items.append(value);
+
+              pub fn deinit(self: *@This(), alloc: Allocator) void {
+                  self.items.deinit(alloc);
+              }
+
+              pub fn push(self: *@This(), alloc: Allocator, value: T) !void {
+                  try self.items.append(alloc, value);
+              }
+
+              pub fn pop(self: *@This()) ?T {
+                  if (self.items.items.len == 0) return null;
+                  return self.items.swapRemove(self.items.items.len - 1);
               }
           };
       }
 
       const IntStack = Stack(i32);
-      var stack = IntStack.init(alloc);
-      defer stack.items.deinit(alloc);
-      try stack.push(42);
+      var stack = IntStack.init(gpa);
+      defer stack.deinit(gpa);
+      try stack.push(gpa, 42);
+      const val = stack.pop(); // 42
     relatedPatterns:
       - "Generic Programming"
       - "Monomorphization"
+
+  - name: Type Introspection Pattern
+    category: behavioral
+    description: >
+      Use @typeInfo for compile-time type reflection. Enables generic serialization,
+      validation, and code generation. In 0.16, use new builtins for type creation.
+    whenToUse:
+      - "Auto-generating serialization/deserialization code"
+      - "Generic validation or field iteration"
+      - "Creating types dynamically at compile time"
+    example: |
+      fn countFields(comptime T: type) comptime_int {
+          return @typeInfo(T).@"struct".fields.len;
+      }
+
+      fn getFieldNames(comptime T: type) [countFields(T)][]const u8 {
+          comptime {
+              var names: [countFields(T)][]const u8 = undefined;
+              for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
+                  names[i] = field.name;
+              }
+              return names;
+          }
+      }
+
+      // 0.16: Create types at compile time
+      const MyEnum = @Enum(u8, .exhaustive,
+          &.{ "red", "green", "blue" },
+          &.{ 0, 1, 2 },
+      );
+    relatedPatterns:
+      - "Comptime Generic Pattern"
+      - "Reflection"
+
+  # =========================================================================
+  # Concurrency Patterns (0.16+)
+  # =========================================================================
+  - name: Future/Async Pattern
+    category: concurrency
+    description: >
+      Use io.async to create independent tasks. Futures support awaiting and cancelation.
+      Group manages many tasks with O(1) overhead per spawn.
+    whenToUse:
+      - "Independent I/O operations that can run concurrently"
+      - "Fan-out work across multiple data sources"
+      - "Timeout and cancelation of long-running operations"
+    example: |
+      pub fn main(init: std.process.Init) !void {
+          const io = init.io;
+          const gpa = init.gpa;
+
+          // Independent async tasks
+          var foo_future = io.async(fetchData, .{io, "/foo"});
+          defer _ = foo_future.cancel(io) catch {};
+          var bar_future = io.async(fetchData, .{io, "/bar"});
+          defer _ = bar_future.cancel(io) catch {};
+
+          const foo = try foo_future.await(io);
+          const bar = try bar_future.await(io);
+
+          // Group for many tasks
+          var group: std.Io.Group = .init;
+          defer group.cancel(io);
+          for (urls) |url| {
+              group.async(io, fetchUrl, .{io, url});
+          }
+          try group.await(io);
+      }
+
+      fn fetchData(io: std.Io, path: []const u8) ![]const u8 {
+          _ = io;
+          _ = path;
+      }
+
+      fn fetchUrl(io: std.Io, url: []const u8) !void {
+          _ = io;
+          _ = url;
+      }
+    relatedPatterns:
+      - "Promise/Future"
+      - "Fan-out/Fan-in"
+
+  - name: Cancelation Pattern
+    category: concurrency
+    description: >
+      Use defer cancel after creating tasks. error.Canceled propagates automatically.
+      Handle with propagate, recancel, or swapCancelProtection.
+    whenToUse:
+      - "Any concurrent task that may need early termination"
+      - "When one task's failure should cancel other tasks"
+    example: |
+      fn processAll(io: std.Io, paths: []const []const u8) !void {
+          var group: std.Io.Group = .init;
+          defer group.cancel(io);
+
+          for (paths) |path| {
+              group.async(io, processFile, .{io, path});
+          }
+          group.await(io) catch |err| switch (err) {
+              error.Canceled => {
+                  // Re-arm cancelation for next check
+                  io.recancel();
+              },
+              else => return err,
+          };
+      }
+
+      fn processFile(io: std.Io, path: []const u8) !void {
+          _ = io;
+          _ = path;
+      }
+    relatedPatterns:
+      - "Future/Async Pattern"
+
+  # =========================================================================
+  # Data Structure Patterns
+  # =========================================================================
+  - name: Opaque Handle Pattern
+    category: structural
+    description: >
+      Use opaque {} types and thin wrappers for ABI-safe interfaces. Common when
+      interfacing with C libraries or building plugin systems.
+    whenToUse:
+      - "C interop with opaque types"
+      - "Hiding implementation details across module boundaries"
+    example: |
+      const c = @cImport(@cInclude("sqlite3.h"));
+
+      pub const Database = struct {
+          handle: *c.sqlite3,
+
+          pub fn open(path: [:0]const u8) !Database {
+              var handle: ?*c.sqlite3 = null;
+              const rc = c.sqlite3_open(path.ptr, &handle);
+              if (rc != 0) return error.OpenFailed;
+              return .{ .handle = handle.? };
+          }
+
+          pub fn close(self: Database) void {
+              _ = c.sqlite3_close(self.handle);
+          }
+      };
+    relatedPatterns:
+      - "Facade"
+      - "Handle-Body"
+
+  - name: Builder Pattern with Struct Init
+    category: creational
+    description: >
+      Use Zig's struct field defaults and named initialization instead of builder classes.
+      Partial initialization with default values covers most builder use cases.
+    whenToUse:
+      - "Creating complex configurations"
+      - "When many fields have sensible defaults"
+    example: |
+      const ServerConfig = struct {
+          host: []const u8 = "localhost",
+          port: u16 = 8080,
+          max_connections: u32 = 1000,
+          timeout_ms: u32 = 5000,
+          tls: bool = false,
+          log_level: std.log.Level = .info,
+
+          pub fn validate(self: ServerConfig) !void {
+              if (self.port == 0) return error.InvalidPort;
+              if (self.max_connections == 0) return error.InvalidConfig;
+          }
+      };
+
+      // Named field init with defaults
+      const config = ServerConfig{
+          .port = 3000,
+          .tls = true,
+      };
+      try config.validate();
+    relatedPatterns:
+      - "Builder"
+      - "Options Object"
+
+  # =========================================================================
+  # Testing Patterns
+  # =========================================================================
+  - name: Table-Driven Test Pattern
+    category: testing
+    description: >
+      Use inline for with comptime-known test cases to create table-driven tests.
+      Zig's comptime makes this pattern especially powerful.
+    whenToUse:
+      - "Testing multiple inputs/outputs for the same function"
+      - "Edge case coverage"
+    example: |
+      const TestCase = struct {
+          input: []const u8,
+          expected: i32,
+          err: ?anyerror = null,
+      };
+
+      const cases = [_]TestCase{
+          .{ .input = "42", .expected = 42 },
+          .{ .input = "-7", .expected = -7 },
+          .{ .input = "0", .expected = 0 },
+          .{ .input = "999999999999", .err = error.Overflow },
+          .{ .input = "abc", .err = error.InvalidCharacter },
+      };
+
+      for (cases) |case| {
+          if (case.err) |expected_err| {
+              try std.testing.expectError(expected_err, parseInt(case.input));
+          } else {
+              const result = try parseInt(case.input);
+              try std.testing.expectEqual(case.expected, result);
+          }
+      }
+    relatedPatterns:
+      - "Parameterized Testing"
+
+  # =========================================================================
+  # Build System Patterns
+  # =========================================================================
+  - name: Build Configuration Pattern
+    category: build
+    description: >
+      Use build.zig for build configuration, dependency management, and code generation.
+      In 0.16, @cImport is deprecated in favor of build system translate-c.
+    whenToUse:
+      - "Setting up project builds with multiple targets"
+      - "Cross-compilation configuration"
+      - "C library integration (replaces @cImport)"
+    example: |
+      // build.zig
+      const std = @import("std");
+
+      pub fn build(b: *std.Build) void {
+          const target = b.standardTargetOptions(.{});
+          const optimize = b.standardOptimizeOption(.{});
+
+          // 0.16: translate-c in build system
+          const translate_c = b.addTranslateC(.{
+              .root_source_file = b.path("src/c.h"),
+              .target = target,
+              .optimize = optimize,
+          });
+
+          const exe = b.addExecutable(.{
+              .name = "myapp",
+              .root_module = b.createModule(.{
+                  .root_source_file = b.path("src/main.zig"),
+                  .optimize = optimize,
+                  .target = target,
+                  .imports = &.{
+                      .{ .name = "c", .module = translate_c.createModule() },
+                  },
+              }),
+          });
+
+          b.installArtifact(exe);
+
+          // Tests
+          const unit_tests = b.addTest(.{
+              .root_source_file = b.path("src/main.zig"),
+              .target = target,
+              .optimize = optimize,
+          });
+          const run_unit_tests = b.addRunArtifact(unit_tests);
+          b.step("test", "Run unit tests").dependOn(&run_unit_tests.step);
+      }
+    relatedPatterns:
+      - "C Integration"

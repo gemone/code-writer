@@ -35,6 +35,18 @@ language:
   transpiler: tsc (official), esbuild, swc, Babel
   packageManager: npm, yarn, pnpm, bun
 
+  sources:
+    stdlib:
+      - pattern: "node_modules/typescript/lib/lib.*.d.ts"
+      - pattern: "/usr/lib/node_modules/typescript/lib/lib.*.d.ts"
+      - pattern: "/usr/local/lib/node_modules/typescript/lib/lib.*.d.ts"
+      - pattern: "~/.npm-global/lib/node_modules/typescript/lib/lib.*.d.ts"
+    docs:
+      - url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference"
+        scope: "javascript"
+      - url: "https://www.typescriptlang.org/docs/handbook"
+        scope: "typescript"
+
   quickReference:
 
     variableDeclaration:

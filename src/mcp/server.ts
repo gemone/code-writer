@@ -4,33 +4,89 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { DatabaseManager } from '../engine/database.js';
 import { LanguageLoader } from '../engine/loader.js';
 import { QueryEngine } from '../engine/query.js';
+import { VectorStore } from '../engine/vector-store.js';
+import { createEmbeddingProvider, loadEmbeddingConfig } from '../engine/embedding.js';
+import { indexLanguage } from '../engine/indexer.js';
+import type { EmbeddingProvider } from '../engine/embedding.js';
 import { createLangRefTool } from '../tools/lang-ref.js';
 import { createLangSearchTool } from '../tools/lang-search.js';
 import { createLangConventionsTool } from '../tools/lang-conventions.js';
 import { createLangCompareTool } from '../tools/lang-compare.js';
 import { createLangFetchTool } from '../tools/lang-fetch.js';
 import { createLangAstTool } from '../tools/lang-ast.js';
+import { createLangIndexTool } from '../tools/lang-index.js';
 
 async function main() {
   const db = new DatabaseManager();
   const loader = new LanguageLoader(db);
   const queryEngine = new QueryEngine(db);
 
-  // Sync YAML data to DB on startup
+  // Sync YAML data to DB on startup (conventions, patterns → SQLite)
   await loader.syncFromYaml();
 
-  const langRefTool = createLangRefTool(queryEngine, loader);
-  const langSearchTool = createLangSearchTool(queryEngine);
+  // Initialize vector store and embedding provider
+  let vectorStore: VectorStore | null = null;
+  let embedding: EmbeddingProvider | null = null;
+
+  try {
+    const embConfig = loadEmbeddingConfig();
+    embedding = await createEmbeddingProvider(embConfig);
+    vectorStore = new VectorStore(embedding.dimension);
+    await vectorStore.loadOrInitialize();
+
+    // Auto-index languages that aren't indexed yet (fire-and-forget for fast MCP startup;
+    // tools fall back to SQLite when vector search isn't ready)
+    const indexing: Promise<void>[] = [];
+    for (const lang of loader.getRegisteredLanguages()) {
+      if (!vectorStore.isIndexed(lang)) {
+        indexing.push(
+          indexLanguage(lang, loader, vectorStore, embedding)
+            .then(result => {
+              if (result.indexed > 0) {
+                console.error(`[code-writer] Auto-indexed ${result.language}: ${result.indexed} documents`);
+              }
+            })
+            .catch(err => {
+              console.error(`[code-writer] Failed to index ${lang}:`, err.message);
+            })
+        );
+      }
+    }
+
+    // Graceful shutdown: persist vector indexes before exit
+    const shutdown = async () => {
+      await Promise.allSettled(indexing);
+      await vectorStore?.persist();
+      process.exit(0);
+    };
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+  } catch (err) {
+    console.error(`[code-writer] Vector search unavailable:`, (err as Error).message);
+  }
+
+  const langRefTool = createLangRefTool(queryEngine, loader, vectorStore, embedding);
+  const langSearchTool = createLangSearchTool(queryEngine, vectorStore, embedding);
   const langConventionsTool = createLangConventionsTool(queryEngine);
-  const langCompareTool = createLangCompareTool(queryEngine);
+  const langCompareTool = createLangCompareTool(queryEngine, vectorStore, embedding);
   const langFetchTool = createLangFetchTool(queryEngine, loader);
-
   const langAstTool = createLangAstTool();
+  const langIndexTool = vectorStore && embedding
+    ? createLangIndexTool(loader, vectorStore, embedding)
+    : null;
 
-  const tools = [langRefTool, langSearchTool, langConventionsTool, langCompareTool, langFetchTool, langAstTool];
+  const tools = [
+    langRefTool,
+    langSearchTool,
+    langConventionsTool,
+    langCompareTool,
+    langFetchTool,
+    langAstTool,
+    ...(langIndexTool ? [langIndexTool] : []),
+  ];
 
   const server = new Server(
-    { name: 'code-writer', version: '0.1.0' },
+    { name: 'code-writer', version: '0.1.1' },
     { capabilities: { tools: {} } }
   );
 

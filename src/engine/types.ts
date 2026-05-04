@@ -5,6 +5,22 @@ import { z } from 'zod';
 export const SeveritySchema = z.enum(['error', 'warn', 'info']);
 export type Severity = z.infer<typeof SeveritySchema>;
 
+// --- Sources Schema (for auto-indexing) ---
+
+export const SourceEntrySchema = z.object({
+  pattern: z.string().optional(),
+  basePath: z.string().optional(),
+  url: z.string().optional(),
+  scope: z.string().optional(),
+});
+export type SourceEntry = z.infer<typeof SourceEntrySchema>;
+
+export const LanguageSourcesSchema = z.object({
+  stdlib: z.array(SourceEntrySchema).optional(),
+  docs: z.array(SourceEntrySchema).optional(),
+});
+export type LanguageSources = z.infer<typeof LanguageSourcesSchema>;
+
 export const LanguageMetaInnerSchema = z.object({
   name: z.string(),
   version: z.string(),
@@ -16,6 +32,7 @@ export const LanguageMetaInnerSchema = z.object({
   runtime: z.string().optional(),
   packageManager: z.string().optional(),
   quickReference: z.record(z.union([z.string(), z.object({ description: z.string(), example: z.string().optional() })])).optional(),
+  sources: LanguageSourcesSchema.optional(),
 }).transform((meta) => ({
   ...meta,
   // Normalize quickReference values to strings
@@ -223,7 +240,7 @@ export const ConventionSchema = z.object({
   severity: SeveritySchema.optional(),
   example: ConventionExampleSchema,
   rationale: z.string().optional(),
-}).transform((conv) => conv);
+});
 export type Convention = z.infer<typeof ConventionSchema>;
 
 // Normalize convention from TS format (id, good/bad as direct fields) or Python format
@@ -297,10 +314,7 @@ export const PatternSchema = z.object({
   example: z.string().optional(),
   relatedPatterns: z.array(z.string()).optional(),
   languages: z.array(z.string()).optional(),
-}).transform((pat) => ({
-  ...pat,
-  when: pat.when,
-}));
+});
 export type Pattern = z.infer<typeof PatternSchema>;
 
 // Normalize pattern from different YAML formats
@@ -394,4 +408,32 @@ export interface ComparisonResult {
       content: string;
     }[];
   }[];
+}
+
+// --- Embedding Config ---
+
+export interface EmbeddingConfig {
+  provider: string;       // "local" | "openai://model" | "http://..."
+  model?: string;         // model name for local provider
+  apiKey?: string;        // optional API key
+  baseUrl?: string;       // optional base URL override
+  dimension?: number;     // embedding vector dimension (for HTTP providers)
+  hfEndpoint?: string;    // HuggingFace mirror endpoint (e.g. "https://hf-mirror.com")
+}
+
+// --- Indexed Code Document ---
+
+export interface CodeDocument {
+  language: string;
+  source: string;         // "stdlib" | "docs"
+  module: string;
+  name: string;
+  signature: string;
+  description: string;
+  code: string;
+  tags: string[];
+}
+
+export interface IndexedDocument extends CodeDocument {
+  embedding: number[];
 }

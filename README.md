@@ -2,7 +2,7 @@
 
 Language-aware coding assistant plugin for **Claude Code** and **OpenCode** via MCP.
 
-Provides structured, queryable access to programming language stdlib APIs, syntax references, coding conventions, and design patterns. Ships with minimal seed data — comprehensive language documentation is auto-fetched on demand via `lang_fetch`.
+Provides structured, queryable access to programming language stdlib APIs, syntax references, coding conventions, and design patterns. Ships with minimal seed data — comprehensive language documentation is auto-fetched on demand via `lang_fetch`. Local stdlib files are auto-indexed on first use with semantic (vector) search powered by Orama.
 
 ## Features
 
@@ -11,11 +11,12 @@ Provides structured, queryable access to programming language stdlib APIs, synta
 | Tool | Description |
 |------|-------------|
 | `lang_ref` | Look up stdlib API reference (signatures, examples) |
-| `lang_search` | Full-text search across stdlib, syntax, conventions, patterns |
+| `lang_search` | Semantic search across stdlib, syntax, conventions, patterns |
 | `lang_conventions` | Coding conventions with severity levels and good/bad examples |
 | `lang_compare` | Compare concepts across multiple languages side-by-side |
 | `lang_fetch` | Scaffold and populate new language definitions from Context7/web |
 | `lang_ast` | AST-based code query, replace, lint, and extract (via tree-sitter) |
+| `lang_index` | Manually trigger stdlib re-indexing for a language |
 
 ### Claude Code Hooks
 
@@ -118,6 +119,37 @@ npm install && npm run build
 
 Add more languages with `lang_fetch(language: "<name>", version: "<version>")` or `/new-lang <name>`.
 
+## Configuration
+
+Global config file: `~/.code-writer/config.yaml`
+
+```yaml
+embedding:
+  provider: "local"                    # "local" (transformers.js WASM) | "openai://model" | "http://..."
+  model: "all-MiniLM-L6-v2"           # local model name
+  hfEndpoint: "https://hf-mirror.com" # HuggingFace mirror (optional, also reads HF_ENDPOINT env var)
+  # apiKey: "sk-..."                   # for OpenAI/external APIs
+  # baseUrl: "https://..."             # API base URL override
+```
+
+### Embedding Providers
+
+| Provider | Config | Notes |
+|----------|--------|-------|
+| Local (WASM) | `provider: "local"` | Default. Uses `onnxruntime-web`, no native binaries needed. First run downloads model (~30MB). |
+| OpenAI | `provider: "openai://text-embedding-3-small"` | Requires `apiKey`. |
+| HTTP API | `provider: "http://localhost:11434/api/embed"` | Generic endpoint (Ollama, etc.). Set `dimension` if not 384. |
+
+### Auto-Indexing
+
+On first startup, the plugin discovers and indexes local stdlib files defined in each language's `sources` config:
+
+- **TypeScript**: `node_modules/typescript/lib/lib.*.d.ts`
+- **Python**: `/usr/lib/python3.*/**/*.py`
+- **Zig**: `/usr/lib/zig/std/**/*.zig` (requires local Zig install)
+
+Index is persisted per-language to `~/.code-writer/orama-<lang>.msp`. Re-index with `lang_index(language: "typescript", force: true)`.
+
 ## Language Data Workflow
 
 The repo ships with **minimal seed data** (conventions + registry). Full stdlib/syntax data is auto-fetched on demand:
@@ -150,8 +182,8 @@ npm run validate     # Validate YAML data files
 
 ```
 src/
-├── engine/           # Core: DB, loader, query, AST, types
-├── tools/            # MCP tool handlers
+├── engine/           # Core: DB, loader, query, AST, types, embedding, vector-store, indexer
+├── tools/            # MCP tool handlers (lang_ref, lang_search, lang_index, etc.)
 ├── hooks/            # Claude Code hooks
 ├── shared/           # Shared constants (EXT_TO_LANG, MODULE_ALIASES)
 └── mcp/              # MCP server entry point
@@ -162,6 +194,10 @@ data/
 ├── typescript/       # TypeScript seed data
 ├── python/           # Python seed data
 └── zig/              # Zig seed data
+~/.code-writer/
+├── config.yaml            # Global config (embedding provider, HF mirror)
+├── data.db                # SQLite (conventions, patterns)
+└── orama-<lang>.msp       # Per-language Orama vector index (e.g. orama-typescript.msp)
 ```
 
 ## License
