@@ -20,6 +20,7 @@ Look up language syntax, standard library APIs, patterns, and conventions.
    ```
    lang_search(language="<language>", query="<topic>")
    ```
+   If no results found, the language data may not be fetched yet. Suggest using `lang_fetch(language: "<language>")` to populate it.
 
 3. **Present Results**: Display findings with clear code examples.
    - Include the syntax or API signature

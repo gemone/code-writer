@@ -34,3 +34,6 @@ npm-debug.log*
 
 # Test coverage
 coverage/
+
+# OMC (oh-my-claudecode) session data
+.omc/

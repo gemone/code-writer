@@ -21,6 +21,7 @@ Review code against language-specific coding standards and conventions.
    ```
    lang_conventions(language="<language>")
    ```
+   If conventions are sparse (seed-only), suggest using `lang_fetch` to populate comprehensive data.
 
 3. **Analyze Code**: Review the code against all loaded conventions.
    - Check naming conventions (camelCase, snake_case, etc.)

@@ -16,7 +16,7 @@ End-to-end code writing with language-aware stdlib lookup, LSP validation, and i
 
 1. **Detect Language**: Identify the target language from the request or project context.
    - Check project memory: `lang_ref(language: "<lang>")`
-   - If language data is missing, use `lang_fetch(language: "<lang>")` to populate it.
+   - If language data is missing, use `lang_fetch(language: "<lang>")` to populate it from Context7/web.
 
 2. **Search APIs**: Find relevant stdlib APIs for the task.
    ```

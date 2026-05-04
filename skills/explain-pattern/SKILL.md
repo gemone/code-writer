@@ -18,7 +18,8 @@ Explain a design pattern or programming idiom with language-specific examples.
 
 2. **Load Pattern Data**: Retrieve pattern information from shared patterns or language-specific patterns.
    - Check `data/_shared/patterns.yaml` for cross-language patterns
-   - Check `data/<language>/patterns.yaml` for language-specific implementations
+   - Use `lang_search(language: "<language>", query: "<pattern>")` for language-specific implementations
+   - If results are sparse, suggest `lang_fetch(language: "<language>")` to populate comprehensive data
 
 3. **Explain the Pattern**: Provide a comprehensive explanation.
    - **Intent**: What problem does this pattern solve?
