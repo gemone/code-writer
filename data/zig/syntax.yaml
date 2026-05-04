@@ -1,0 +1,95 @@
+# Zig Syntax Guide
+# Minimal seed — use lang_fetch to populate comprehensive data
+
+version: "1"
+syntax:
+  - category: "variables"
+    description: "Variable declarations, types, and optionals"
+    sections:
+      - name: "Variable Declaration"
+        description: "Use const for immutable, var for mutable. SCREAMING_SNAKE for comptime constants."
+        syntax: "const name: Type = value;\nvar name: Type = value;"
+        examples:
+          - code: |
+              const x: u32 = 42;
+              const name = "zig"; // inferred
+              var counter: u32 = 0;
+            description: "Basic declarations"
+        notes:
+          - "Use const by default, var only when mutation is needed"
+          - "SCREAMING_SNAKE_CASE for comptime-known constants"
+
+  - category: "functions"
+    description: "Function declarations and error unions"
+    sections:
+      - name: "Function Declaration"
+        description: "Functions with fn keyword. Parameters immutable. Use !Type for error unions."
+        syntax: "fn name(param: Type) ReturnType { ... }"
+        examples:
+          - code: |
+              fn add(a: i32, b: i32) i32 { return a + b; }
+              fn read_file(alloc: Allocator, path: []const u8) ![]u8 {
+                  const file = try std.fs.cwd().openFile(path, .{});
+                  defer file.close();
+                  return try file.readToEndAlloc(alloc, 1024 * 1024);
+              }
+            description: "Basic and error-returning functions"
+        notes:
+          - "try propagates errors, catch handles them"
+
+  - category: "control-flow"
+    description: "for, while, and switch"
+    sections:
+      - name: "Loops and Iteration"
+        description: "for iterates over slices and ranges. while with continue expression."
+        syntax: "for (items) |item| { ... }\nwhile (cond) : (expr) { ... }"
+        examples:
+          - code: |
+              for (items) |item| { process(item); }
+              for (0..10) |i| { std.debug.print("{d}\n", .{i}); }
+              var i: u32 = 0;
+              while (i < 10) : (i += 1) { /* ... */ }
+            description: "for and while loops"
+        notes:
+          - "if works as expression: const x = if (c) a else b;"
+          - "switch is exhaustive for enums and tagged unions"
+
+  - category: "structs"
+    description: "Structs and tagged unions"
+    sections:
+      - name: "Struct Declaration"
+        description: "Value types with methods as self-parameter functions."
+        syntax: "const Name = struct { field: Type, ... };"
+        examples:
+          - code: |
+              const Point = struct {
+                  x: f64,
+                  y: f64,
+                  pub fn distance(self: Point, other: Point) f64 {
+                      return @sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2);
+                  }
+              };
+            description: "Struct with method"
+        notes:
+          - "Structs are value types (copied on assignment)"
+
+  - category: "error-handling"
+    description: "Error unions and defer"
+    sections:
+      - name: "Error Unions"
+        description: "Errors are values in error unions (error!T). Use try/catch and defer."
+        syntax: "!Type // error union\ntry expr // propagate\ncatch |err| handler // handle"
+        examples:
+          - code: |
+              const result = try risky_operation();
+              const fallback = risky_operation() catch |err| {
+                  std.debug.print("error: {}\n", .{err});
+                  return err;
+              };
+              // defer for cleanup
+              const buf = try alloc.alloc(u8, 1024);
+              defer alloc.free(buf);
+            description: "Error handling and defer"
+        notes:
+          - "catch can provide default: `expr catch 0`"
+          - "errdefer runs only on error path"

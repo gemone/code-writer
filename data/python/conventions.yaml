@@ -1,427 +1,184 @@
 # Python Coding Conventions
-# PEP 8 and community conventions with severity levels
-# Severity levels: error (must fix), warn (should fix), info (nice to have)
+# Minimal seed - comprehensive data auto-fetched via lang_fetch
+# Severity: error (must fix), warn (should fix), info (nice to have)
 
 conventions:
-  # =========================================================================
-  # Naming
-  # =========================================================================
   - id: naming-pep8
-    title: PEP 8 Naming Conventions
+    rule: "snake_case for functions/variables, PascalCase for classes, UPPER_SNAKE for constants."
     severity: warn
-    category: naming
-    description: >
-      Follow PEP 8 naming conventions: snake_case for functions, methods, and
-      variables; PascalCase for classes; UPPER_SNAKE_CASE for constants.
-      Avoid single-character names except for loop variables and common math.
-    rule: >
-      Functions, methods, and variables MUST use snake_case. Classes MUST use
-      PascalCase. Module-level constants MUST use UPPER_SNAKE_CASE. Avoid
-      ambiguous names like 'l', 'O', 'I' which look like numbers.
-    references:
-      - https://peps.python.org/pep-0008/#naming-conventions
-    examples:
-      good:
-        - |
-          # Variables and functions: snake_case
-          user_name = "Alice"
-          item_count = 42
-          is_active = True
+    rationale: "PEP 8 naming ensures consistency across the Python ecosystem."
+    tags: [naming, readability]
+    good:
+      example: |
+        user_name = "Alice"
+        MAX_RETRY_COUNT = 3
 
-          def calculate_total(items: list[float]) -> float:
-              return sum(items)
+        def calculate_total(items: list[float]) -> float:
+            return sum(items)
 
-          def get_user_by_id(user_id: int) -> User:
-              ...
+        class DatabaseConnection: ...
+    bad:
+      example: |
+        def calculateTotal(items): ...
+        class http_request_handler: ...
+        max_retry_count = 3
 
-        - |
-          # Classes: PascalCase
-          class HttpRequestHandler:
-              ...
-
-          class DatabaseConnection:
-              ...
-
-        - |
-          # Constants: UPPER_SNAKE_CASE
-          MAX_RETRY_COUNT = 3
-          DEFAULT_TIMEOUT = 30
-          API_BASE_URL = "https://api.example.com"
-      bad:
-        - |
-          # camelCase for functions (wrong in Python)
-          def calculateTotal(items):
-              ...
-
-          # snake_case for classes
-          class http_request_handler:
-              ...
-
-          # lowercase for constants
-          max_retry_count = 3
-
-  # =========================================================================
-  # Type Hints
-  # =========================================================================
   - id: type-hints-public
-    title: Type Hints on Public Functions
+    rule: "Type hints on all public function parameters and return values."
     severity: warn
-    category: typing
-    description: >
-      All public functions and methods should have type hints for parameters
-      and return values. This improves documentation, enables static analysis,
-      and helps IDEs provide better autocompletion.
-    rule: >
-      Public functions and methods MUST have type annotations for all parameters
-      and the return type. Private/internal functions are recommended but not
-      required. Use modern syntax (X | Y) on Python 3.10+, typing.Union on older.
-    references:
-      - https://peps.python.org/pep-0484/
-    examples:
-      good:
-        - |
-          def process_items(items: list[str], limit: int = 100) -> dict[str, int]:
-              """Process items and return count by category."""
-              ...
+    rationale: "Enables static analysis, IDE autocompletion, and documentation."
+    tags: [typing, safety]
+    good:
+      example: |
+        def find_user(email: str) -> User | None: ...
+        def process_items(items: list[str], limit: int = 100) -> dict[str, int]: ...
+    bad:
+      example: |
+        def find_user(email): ...
+        def process_items(items, limit=100): ...
 
-          def find_user(email: str) -> User | None:
-              """Find user by email, return None if not found."""
-              ...
-
-        - |
-          # Private functions - recommended but not required
-          def _validate_input(data: dict) -> bool:
-              ...
-
-          def _internal_helper(x: int) -> int:
-              return x * 2
-      bad:
-        - |
-          # Missing type hints on public API
-          def process_items(items, limit=100):
-              ...
-
-          def find_user(email):
-              ...
-
-  # =========================================================================
-  # Path Handling
-  # =========================================================================
-  - id: prefer-pathlib
-    title: Prefer pathlib over os.path
-    severity: warn
-    category: stdlib
-    description: >
-      Use pathlib.Path for file system path operations instead of os.path.
-      pathlib provides an object-oriented interface that is more readable,
-      chainable, and cross-platform.
-    rule: >
-      New code SHOULD use pathlib.Path for all path operations. Prefer Path /
-      "child" over os.path.join. Prefer Path.exists() over os.path.exists().
-      Migrating existing os.path code is encouraged but not required.
-    references:
-      - https://docs.python.org/3/library/pathlib.html
-    examples:
-      good:
-        - |
-          from pathlib import Path
-
-          config_dir = Path.home() / ".config" / "myapp"
-          config_file = config_dir / "settings.yaml"
-
-          if config_file.exists():
-              content = config_file.read_text()
-
-          # Create directory
-          output_dir = Path("output") / "reports"
-          output_dir.mkdir(parents=True, exist_ok=True)
-
-          # Glob for files
-          for py_file in Path("src").glob("**/*.py"):
-              print(py_file.name)
-      bad:
-        - |
-          import os
-
-          config_dir = os.path.join(os.path.expanduser("~"), ".config", "myapp")
-          config_file = os.path.join(config_dir, "settings.yaml")
-
-          if os.path.exists(config_file):
-              with open(config_file) as f:
-                  content = f.read()
-
-          # Manual path construction
-          output_dir = os.path.join("output", "reports")
-          os.makedirs(output_dir, exist_ok=True)
-
-  # =========================================================================
-  # String Formatting
-  # =========================================================================
   - id: prefer-fstrings
-    title: Prefer f-strings over .format() and %
+    rule: "Use f-strings over .format() and % formatting."
     severity: info
-    category: style
-    description: >
-      Use f-strings (formatted string literals) for string formatting. They
-      are more readable, concise, and performant than .format() and %-formatting.
-    rule: >
-      Use f-strings for string formatting in new code. The .format() method is
-      acceptable when the template string is defined separately from the
-      formatting call (e.g., in configuration).
-    references:
-      - https://docs.python.org/3/reference/lexical_analysis.html#f-strings
-    examples:
-      good:
-        - |
-          name = "Alice"
-          age = 30
+    rationale: "F-strings are more readable, concise, and performant."
+    tags: [style, readability]
+    good:
+      example: |
+        greeting = f"Hello, {name}!"
+        price = f"${total:.2f}"
+        debug = f"{name=}, {age=}"  # Debug format (3.8+)
+    bad:
+      example: |
+        greeting = "Hello, %s!" % name
+        greeting = "Hello, {}!".format(name)
 
-          # f-strings (preferred)
-          greeting = f"Hello, {name}! You are {age} years old."
-          debug = f"{name=}, {age=}"  # Debug format (3.8+)
-          price = f"${total:.2f}"
-
-          # Expressions in f-strings
-          status = f"Active: {user.is_active and user.verified}"
-      bad:
-        - |
-          name = "Alice"
-          age = 30
-
-          # %-formatting (avoid in new code)
-          greeting = "Hello, %s! You are %d years old." % (name, age)
-
-          # .format() (acceptable but verbose)
-          greeting = "Hello, {}! You are {} years old.".format(name, age)
-          greeting = "Hello, {name}! You are {age} years old.".format(
-              name=name, age=age
-          )
-
-  # =========================================================================
-  # Exception Handling
-  # =========================================================================
   - id: specific-exceptions
-    title: Catch Specific Exception Types
+    rule: "Catch specific exception types. Never bare except or except Exception."
     severity: error
-    category: error-handling
-    description: >
-      Never use bare 'except' or 'except Exception' without good reason.
-      Catch specific exceptions to avoid masking bugs and unexpected errors.
-    rule: >
-      Exception handlers MUST catch specific exception types. Bare 'except'
-      clauses are prohibited except in top-level error handlers. Always
-      preserve the exception chain with 'raise ... from e' when re-raising.
-    references:
-      - https://docs.python.org/3/tutorial/errors.html
-    examples:
-      good:
-        - |
-          import json
-          from pathlib import Path
+    rationale: "Broad catches mask bugs. Preserve chains with 'raise ... from e'."
+    tags: [error-handling, safety]
+    good:
+      example: |
+        try:
+            return json.loads(path.read_text())
+        except FileNotFoundError:
+            return {}
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in {path}: {e}") from e
+    bad:
+      example: |
+        try:
+            data = json.load(f)
+        except:
+            return {}
 
-          def load_config(path: Path) -> dict:
-              """Load and parse a JSON config file."""
-              try:
-                  content = path.read_text()
-                  return json.loads(content)
-              except FileNotFoundError:
-                  return {}
-              except json.JSONDecodeError as e:
-                  raise ValueError(f"Invalid JSON in {path}: {e}") from e
-              except PermissionError:
-                  raise RuntimeError(f"Cannot read {path}: permission denied")
-      bad:
-        - |
-          def load_config(path: str) -> dict:
-              try:
-                  with open(path) as f:
-                      return json.load(f)
-              except:  # Catches KeyboardInterrupt, SystemExit, etc.
-                  return {}
-
-          def load_config2(path: str) -> dict:
-              try:
-                  with open(path) as f:
-                      return json.load(f)
-              except Exception:  # Too broad, masks bugs
-                  return {}
-
-  # =========================================================================
-  # Resource Management
-  # =========================================================================
-  - id: context-managers-resources
-    title: Use Context Managers for Resources
+  - id: no-wildcard-imports
+    rule: "Never use 'from module import *'. Import names explicitly."
     severity: error
-    category: resource-management
-    description: >
-      Always use context managers (with statements) for resources that need
-      cleanup: files, network connections, locks, database connections, etc.
-    rule: >
-      Resources that implement cleanup MUST be used with context managers.
-      Never open files without a 'with' statement in production code. This
-      ensures resources are properly released even if exceptions occur.
-    references:
-      - https://docs.python.org/3/library/contextlib.html
-    examples:
-      good:
-        - |
-          from pathlib import Path
+    rationale: "Wildcard imports pollute namespace and hide dependencies."
+    tags: [imports, readability]
+    good:
+      example: |
+        from collections import defaultdict, Counter
+        from typing import Optional, Union
+    bad:
+      example: |
+        from os import *
+        from math import *
 
-          # Files
-          with open("data.txt") as f:
-              content = f.read()
-
-          # Better: pathlib
-          content = Path("data.txt").read_text()
-
-          # Multiple resources
-          with open("input.txt") as src, open("output.txt", "w") as dst:
-              dst.write(src.read())
-
-          # Locks
-          import threading
-          lock = threading.Lock()
-          with lock:
-              shared_resource.modify()
-
-        - |
-          # Database connections
-          async def query_db(sql: str) -> list[dict]:
-              async with get_connection() as conn:
-                  async with conn.cursor() as cursor:
-                      await cursor.execute(sql)
-                      return await cursor.fetchall()
-      bad:
-        - |
-          # Leaked file handle on exception
-          f = open("data.txt")
-          content = f.read()
-          f.close()
-
-          # Even worse: no close at all
-          content = open("data.txt").read()
-
-  # =========================================================================
-  # Documentation
-  # =========================================================================
-  - id: docstrings
-    title: Write Docstrings for Public APIs
-    severity: warn
-    category: documentation
-    description: >
-      All public modules, classes, functions, and methods should have docstrings.
-      Use Google, NumPy, or Sphinx docstring style consistently throughout the project.
-    rule: >
-      Public functions and methods MUST have a docstring describing purpose,
-      parameters, return values, and exceptions. Use Google style by default.
-      Trivial functions (property getters, __init__ with obvious args) may omit
-      docstrings.
-    references:
-      - https://peps.python.org/pep-0257/
-      - https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings
-    examples:
-      good:
-        - |
-          def calculate_bmi(weight_kg: float, height_m: float) -> float:
-              """Calculate Body Mass Index.
-
-              Args:
-                  weight_kg: Weight in kilograms. Must be positive.
-                  height_m: Height in meters. Must be positive.
-
-              Returns:
-                  The calculated BMI value.
-
-              Raises:
-                  ValueError: If weight or height is not positive.
-              """
-              if weight_kg <= 0 or height_m <= 0:
-                  raise ValueError("Weight and height must be positive")
-              return weight_kg / (height_m ** 2)
-
-        - |
-          class UserService:
-              """Service for managing user accounts.
-
-              This service handles CRUD operations for user accounts
-              and manages authentication state.
-
-              Attributes:
-                  repository: The data access layer for users.
-                  cache: Optional cache for user lookups.
-              """
-
-              def __init__(self, repository: UserRepository) -> None:
-                  self.repository = repository
-
-              def get_user(self, user_id: int) -> User | None:
-                  """Retrieve a user by ID.
-
-                  Args:
-                      user_id: The unique identifier of the user.
-
-                  Returns:
-                      The user if found, None otherwise.
-                  """
-                  ...
-      bad:
-        - |
-          # No docstring
-          def calculate_bmi(weight_kg, height_m):
-              return weight_kg / (height_m ** 2)
-
-          # Useless docstring
-          def calculate_bmi(weight_kg, height_m):
-              """Calculates BMI."""
-              return weight_kg / (height_m ** 2)
-
-  # =========================================================================
-  # Imports
-  # =========================================================================
-  - id: import-ordering
-    title: Import Ordering and Grouping
+  - id: prefer-list-comprehensions
+    rule: "Use comprehensions over map/filter with lambda for simple transforms."
     severity: info
-    category: style
-    description: >
-      Group imports in the following order, separated by blank lines: standard
-      library, third-party packages, local/project imports. Sort alphabetically
-      within each group.
-    rule: >
-      Imports MUST be grouped: (1) standard library, (2) third-party, (3) local.
-      Separate groups with a blank line. Sort alphabetically within groups.
-      Place 'from' imports after plain 'import' within each group.
-    references:
-      - https://peps.python.org/pep-0008/#imports
-    examples:
-      good:
-        - |
-          # Standard library
-          import json
-          import os
-          from collections import defaultdict
-          from datetime import datetime
-          from pathlib import Path
+    rationale: "Comprehensions are more Pythonic and readable."
+    tags: [style, readability]
+    good:
+      example: |
+        squares = [x ** 2 for x in range(10)]
+        evens = [x for x in numbers if x % 2 == 0]
+        lengths = {w: len(w) for w in ["hello", "world"]}
+    bad:
+      example: |
+        squares = list(map(lambda x: x ** 2, range(10)))
+        evens = list(filter(lambda x: x % 2 == 0, numbers))
 
-          # Third-party
-          import httpx
-          import pydantic
-          from fastapi import FastAPI, HTTPException
+  - id: prefer-pathlib
+    rule: "Use pathlib.Path over os.path for all path operations."
+    severity: warn
+    rationale: "Object-oriented, chainable, cross-platform interface."
+    tags: [stdlib, readability]
+    good:
+      example: |
+        from pathlib import Path
 
-          # Local
-          from .config import settings
-          from .models import User
-          from .utils import format_date
-      bad:
-        - |
-          # Mixed and unsorted
-          from .models import User
-          import json
-          from fastapi import FastAPI
-          import os
-          from .config import settings
-          import httpx
-          from datetime import datetime
+        config = Path.home() / ".config" / "myapp" / "settings.yaml"
+        if config.exists():
+            content = config.read_text()
 
-          # Wildcard import
-          from os import *
-          from math import *
+        for py_file in Path("src").glob("**/*.py"):
+            print(py_file.name)
+    bad:
+      example: |
+        import os
+        config = os.path.join(os.path.expanduser("~"), ".config", "myapp", "settings.yaml")
+        if os.path.exists(config):
+            with open(config) as f: content = f.read()
+
+  - id: docstrings-public
+    rule: "Write docstrings for all public modules, classes, and functions."
+    severity: warn
+    rationale: "Docstrings are Python's primary documentation mechanism."
+    tags: [documentation]
+    good:
+      example: |
+        def calculate_bmi(weight_kg: float, height_m: float) -> float:
+            """Calculate Body Mass Index.
+
+            Args:
+                weight_kg: Weight in kilograms. Must be positive.
+                height_m: Height in meters. Must be positive.
+
+            Returns:
+                The calculated BMI value.
+            """
+            return weight_kg / (height_m ** 2)
+    bad:
+      example: |
+        def calculate_bmi(weight_kg, height_m):
+            return weight_kg / (height_m ** 2)
+
+  - id: explicit-return-types
+    rule: "Always specify return types on public functions, even when returning None."
+    severity: warn
+    rationale: "Explicit return types improve docs and type checker coverage."
+    tags: [typing, safety]
+    good:
+      example: |
+        def initialize(config: dict) -> None: ...
+        def get_user(user_id: int) -> User | None: ...
+    bad:
+      example: |
+        def initialize(config: dict): ...
+        def get_user(user_id: int): ...
+
+  - id: import-ordering
+    rule: "Group imports: stdlib, third-party, local. Separate with blank lines."
+    severity: info
+    rationale: "Consistent order improves readability and reveals dependencies."
+    tags: [style, imports]
+    good:
+      example: |
+        import json
+        from pathlib import Path
+        from typing import Optional
+
+        import httpx
+        from fastapi import FastAPI
+
+        from .config import settings
+        from .models import User
+    bad:
+      example: |
+        from .models import User
+        import json
+        from fastapi import FastAPI
+        import os

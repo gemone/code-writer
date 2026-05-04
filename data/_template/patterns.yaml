@@ -1,114 +1,44 @@
 # Patterns Template
 # Copy this file to data/<language>/patterns.yaml and fill in the details
 
-version: 1
-language: "" # TODO: Language name (e.g., "typescript")
+version: "1"
 patterns:
-  - id: "" # TODO: Unique identifier (e.g., "dependency-injection")
-    name: "" # TODO: Pattern name (e.g., "Dependency Injection")
-    category: "" # TODO: Category (e.g., "creational", "structural", "behavioral")
-    intent: "" # TODO: What problem this pattern solves
-    when_to_use:
-      - "" # TODO: Scenario 1
-      - "" # TODO: Scenario 2
-    when_to_avoid:
-      - "" # TODO: Anti-pattern 1
-      - "" # TODO: Anti-pattern 2
-    structure:
-      - component: "" # TODO: Component name (e.g., "Container")
-        description: "" # TODO: What this component does
-    implementation:
-      description: "" # TODO: How to implement in this language
-      code: | # TODO: Complete implementation example
-        // Implementation here
-    usage:
-      description: "" # TODO: How to use this pattern
-      code: | # TODO: Usage example
-        // Usage here
-    related_patterns:
-      - "" # TODO: Related pattern 1
-      - "" # TODO: Related pattern 2
-    references: [] # TODO: Links to documentation
+  - name: "{{PATTERN_NAME}}"
+    category: "{{CATEGORY}}"
+    description: "{{DESCRIPTION_OF_WHAT_THE_PATTERN_DOES}}"
+    when: "{{WHEN_TO_USE_THIS_PATTERN}}"
+    example: |
+      {{EXAMPLE_CODE}}
+    relatedPatterns:
+      - "{{RELATED_PATTERN_1}}"
+      - "{{RELATED_PATTERN_2}}"
 
-  # Example pattern:
-  - id: "dependency-injection"
-    name: "Dependency Injection"
-    category: "creational"
-    intent: "Decouple objects from their dependencies by injecting dependencies rather than creating them internally."
-    when_to_use:
-      - "When you want to decouple classes from their dependencies"
-      - "When you need to swap implementations (e.g., for testing)"
-      - "When dependencies have complex initialization"
-    when_to_avoid:
-      - "When dependencies are simple and stable"
-      - "When it adds unnecessary complexity"
-    structure:
-      - component: "Container"
-        description: "Manages dependency registration and resolution"
-      - component: "Injectable"
-        description: "Interface or decorator marking classes as injectable"
-      - component: "Token"
-        description: "Unique identifier for dependencies"
-    implementation:
-      description: "Implement using decorators and a container class"
-      code: |
-        // Token for dependency identification
-        const TOKENS = {
-          Logger: Symbol('Logger'),
-          Database: Symbol('Database'),
-        };
+  # Example:
+  - name: Builder Pattern
+    category: creational
+    description: >
+      Separates object construction from its representation, allowing the same
+      construction process to create different representations.
+    when: >
+      When an object has many optional parameters or complex initialization
+      logic that would make a constructor unwieldy.
+    example: |
+      class QueryBuilder:
+          def __init__(self) -> None:
+              self._query: dict[str, object] = {}
 
-        // Simple container
-        class Container {
-          private bindings = new Map<symbol, any>();
+          def select(self, *fields: str) -> "QueryBuilder":
+              self._query["select"] = fields
+              return self
 
-          bind<T>(token: symbol, implementation: T): void {
-            this.bindings.set(token, implementation);
-          }
+          def where(self, condition: str) -> "QueryBuilder":
+              self._query["where"] = condition
+              return self
 
-          resolve<T>(token: symbol): T {
-            return this.bindings.get(token);
-          }
-        }
+          def build(self) -> dict[str, object]:
+              return self._query
 
-        // Usage with decorators
-        function Injectable(token: symbol) {
-          return function (target: any) {
-            // Register with container
-          };
-        }
-    usage:
-      description: "Register dependencies and inject them into classes"
-      code: |
-        const container = new Container();
-        container.bind(TOKENS.Logger, new ConsoleLogger());
-        container.bind(TOKENS.Database, new PostgresDatabase());
-
-        const userService = new UserService(
-          container.resolve(TOKENS.Logger),
-          container.resolve(TOKENS.Database)
-        );
-    related_patterns:
-      - "Factory Method"
-      - "Singleton"
-      - "Service Locator"
-    references:
-      - "https://en.wikipedia.org/wiki/Dependency_injection"
-
-  - id: "" # TODO: Another pattern
-    name: "" # TODO: Pattern name
-    category: "" # TODO: Category
-    intent: "" # TODO: Intent
-    when_to_use:
-      - "" # TODO: When to use
-    when_to_avoid:
-      - "" # TODO: When to avoid
-    structure: []
-    implementation:
-      description: ""
-      code: ""
-    usage:
-      description: ""
-      code: ""
-    related_patterns: []
-    references: []
+      query = QueryBuilder().select("name", "age").where("age > 18").build()
+    relatedPatterns:
+      - Factory Method
+      - Abstract Factory

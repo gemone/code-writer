@@ -1,12 +1,7 @@
 # TypeScript Standard Library Reference
-# Code Standards Plugin - Built-in APIs and Common Modules
+# Minimal seed - use lang_fetch to populate comprehensive data
 
 stdlib:
-
-  # =========================================================================
-  # Array
-  # =========================================================================
-
   Array:
     description: "Ordered collection with indexed access and a rich set of iteration and transformation methods."
     methods:
@@ -15,35 +10,19 @@ stdlib:
         description: "Transform each element using a mapping function and return a new array."
         returns: "U[]"
         example: |
-          const names = ["Alice", "Bob", "Charlie"];
+          const names = ["Alice", "Bob"];
           const upper = names.map((name) => name.toUpperCase());
-          // ["ALICE", "BOB", "CHARLIE"]
-
-          const users = [
-            { name: "Alice", age: 30 },
-            { name: "Bob", age: 25 },
-          ];
-          const nameList = users.map(({ name }) => name);
-          // ["Alice", "Bob"]
+          // ["ALICE", "BOB"]
         tags: [transformation, immutable]
-
       - name: filter
         signature: "(predicate: (value: T, index: number, array: T[]) => boolean): T[]"
         description: "Return a new array containing elements that pass the predicate test."
         returns: "T[]"
         example: |
-          const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+          const numbers = [1, 2, 3, 4, 5];
           const evens = numbers.filter((n) => n % 2 === 0);
-          // [2, 4, 6, 8, 10]
-
-          const users = [
-            { name: "Alice", active: true },
-            { name: "Bob", active: false },
-            { name: "Charlie", active: true },
-          ];
-          const activeUsers = users.filter((u) => u.active);
+          // [2, 4]
         tags: [filtering, immutable]
-
       - name: reduce
         signature: "<U>(callbackfn: (previousValue: U, currentValue: T, currentIndex: number, array: T[]) => U, initialValue: U): U"
         description: "Reduce the array to a single value by accumulating results from left to right."
@@ -52,310 +31,44 @@ stdlib:
           const numbers = [1, 2, 3, 4, 5];
           const sum = numbers.reduce((acc, n) => acc + n, 0);
           // 15
-
-          const words = ["hello", "world", "foo", "bar"];
-          const byLength = words.reduce<Record<number, string[]>>((acc, word) => {
-            const len = word.length;
-            (acc[len] ??= []).push(word);
-            return acc;
-          }, {});
-          // { 3: ["foo", "bar"], 5: ["hello", "world"] }
         tags: [aggregation, transformation]
 
-      - name: find
-        signature: "(predicate: (value: T, index: number, obj: T[]) => boolean): T | undefined"
-        description: "Return the first element that matches the predicate, or undefined."
-        returns: "T | undefined"
+  Promise:
+    description: "Asynchronous computation that eventually resolves to a value or rejects with an error."
+    methods:
+      - name: all
+        signature: "<T>(values: Iterable<T | PromiseLike<T>>): Promise<Awaited<T>[]>"
+        description: "Wait for all promises to resolve. Rejects immediately on the first rejection."
+        returns: "Promise<Awaited<T>[]>"
         example: |
-          const users = [
-            { id: 1, name: "Alice" },
-            { id: 2, name: "Bob" },
-            { id: 3, name: "Charlie" },
-          ];
-          const bob = users.find((u) => u.name === "Bob");
-          // { id: 2, name: "Bob" }
-
-          const missing = users.find((u) => u.id === 99);
-          // undefined
-        tags: [search]
-
-      - name: findIndex
-        signature: "(predicate: (value: T, index: number, obj: T[]) => boolean): number"
-        description: "Return the index of the first element matching the predicate, or -1."
-        returns: "number"
+          const [users, posts] = await Promise.all([
+            fetchUsers(),
+            fetchPosts(),
+          ]);
+        tags: [async, parallel]
+      - name: allSettled
+        signature: "<T>(values: Iterable<T | PromiseLike<T>>): Promise<PromiseSettledResult<Awaited<T>>[]>"
+        description: "Wait for all promises to settle (resolve or reject). Never rejects."
+        returns: "Promise<PromiseSettledResult<Awaited<T>>[]>"
         example: |
-          const items = ["apple", "banana", "cherry"];
-          const idx = items.findIndex((item) => item === "banana");
-          // 1
-
-          const notFound = items.findIndex((item) => item === "grape");
-          // -1
-        tags: [search]
-
-      - name: some
-        signature: "(predicate: (value: T, index: number, array: T[]) => boolean): boolean"
-        description: "Return true if at least one element passes the predicate test."
-        returns: "boolean"
+          const results = await Promise.allSettled([
+            fetchFromPrimary(),
+            fetchFromCache(),
+          ]);
+          const successful = results
+            .filter((r): r is PromiseFulfilledResult<Data> => r.status === "fulfilled")
+            .map((r) => r.value);
+        tags: [async, resilient]
+      - name: race
+        signature: "<T>(values: Iterable<T | PromiseLike<T>>): Promise<Awaited<T>>"
+        description: "Return the first promise to settle (resolve or reject)."
+        returns: "Promise<Awaited<T>>"
         example: |
-          const numbers = [1, 3, 5, 7, 8];
-          const hasEven = numbers.some((n) => n % 2 === 0);
-          // true
-
-          const permissions = ["read", "write"];
-          const canDelete = permissions.some((p) => p === "delete");
-          // false
-        tags: [testing, boolean]
-
-      - name: every
-        signature: "(predicate: (value: T, index: number, array: T[]) => boolean): boolean"
-        description: "Return true if all elements pass the predicate test."
-        returns: "boolean"
-        example: |
-          const ages = [18, 21, 25, 30];
-          const allAdults = ages.every((age) => age >= 18);
-          // true
-
-          const tasks = [
-            { name: "A", done: true },
-            { name: "B", done: false },
-          ];
-          const allDone = tasks.every((t) => t.done);
-          // false
-        tags: [testing, boolean]
-
-      - name: flat
-        signature: "(depth?: number): FlatArray<T, Depth>[]"
-        description: "Flatten nested arrays up to the specified depth (default 1)."
-        returns: "FlatArray<T, Depth>[]"
-        example: |
-          const nested = [[1, 2], [3, [4, 5]], [6]];
-          const flat = nested.flat();
-          // [1, 2, 3, [4, 5], 6]
-
-          const deep = nested.flat(2);
-          // [1, 2, 3, 4, 5, 6]
-        tags: [transformation, flattening]
-
-      - name: flatMap
-        signature: "<U>(callbackfn: (value: T, index: number, array: T[]) => U | readonly U[]): U[]"
-        description: "Map each element and then flatten the result by one level."
-        returns: "U[]"
-        example: |
-          const sentences = ["Hello world", "Goodbye moon"];
-          const words = sentences.flatMap((s) => s.split(" "));
-          // ["Hello", "world", "Goodbye", "moon"]
-
-          const orders = [
-            { id: 1, items: ["a", "b"] },
-            { id: 2, items: ["c"] },
-          ];
-          const allItems = orders.flatMap((o) => o.items);
-          // ["a", "b", "c"]
-        tags: [transformation, flattening]
-
-      - name: slice
-        signature: "(start?: number, end?: number): T[]"
-        description: "Return a shallow copy of a portion of the array without modifying the original."
-        returns: "T[]"
-        example: |
-          const letters = ["a", "b", "c", "d", "e"];
-          const middle = letters.slice(1, 4);
-          // ["b", "c", "d"]
-
-          const lastTwo = letters.slice(-2);
-          // ["d", "e"]
-        tags: [extraction, immutable]
-
-      - name: splice
-        signature: "(start: number, deleteCount?: number, ...items: T[]): T[]"
-        description: "Change the array by removing, replacing, or adding elements in place. Returns removed elements."
-        returns: "T[]"
-        example: |
-          const arr = [1, 2, 3, 4, 5];
-          const removed = arr.splice(1, 2, 10, 20);
-          // arr is now [1, 10, 20, 4, 5]
-          // removed is [2, 3]
-
-          // Insert without removing
-          arr.splice(2, 0, 15);
-          // [1, 10, 15, 20, 4, 5]
-        tags: [mutation]
-
-      - name: sort
-        signature: "(compareFn?: (a: T, b: T) => number): this"
-        description: "Sort the array in place and return the sorted array. Default is lexicographic."
-        returns: "this"
-        example: |
-          const numbers = [3, 1, 4, 1, 5, 9];
-          numbers.sort((a, b) => a - b);
-          // [1, 1, 3, 4, 5, 9]
-
-          const users = [
-            { name: "Charlie", age: 30 },
-            { name: "Alice", age: 25 },
-            { name: "Bob", age: 35 },
-          ];
-          users.sort((a, b) => a.name.localeCompare(b.name));
-          // Alice, Bob, Charlie
-        tags: [mutation, sorting]
-
-      - name: reverse
-        signature: "(): T[]"
-        description: "Reverse the array in place and return the reversed array."
-        returns: "T[]"
-        example: |
-          const letters = ["a", "b", "c", "d"];
-          letters.reverse();
-          // ["d", "c", "b", "a"]
-        tags: [mutation]
-
-      - name: includes
-        signature: "(searchElement: T, fromIndex?: number): boolean"
-        description: "Return true if the array contains the specified value."
-        returns: "boolean"
-        example: |
-          const fruits = ["apple", "banana", "cherry"];
-          fruits.includes("banana"); // true
-          fruits.includes("grape");  // false
-
-          const numbers = [1, 2, 3, NaN];
-          numbers.includes(NaN); // true (unlike indexOf)
-        tags: [search, boolean]
-
-      - name: indexOf
-        signature: "(searchElement: T, fromIndex?: number): number"
-        description: "Return the first index of the element, or -1 if not found."
-        returns: "number"
-        example: |
-          const letters = ["a", "b", "c", "b", "a"];
-          letters.indexOf("b");     // 1
-          letters.indexOf("b", 2);  // 3
-          letters.indexOf("z");     // -1
-        tags: [search]
-
-      - name: concat
-        signature: "(...items: ConcatArray<T>[]): T[]"
-        description: "Merge two or more arrays into a new array without modifying originals."
-        returns: "T[]"
-        example: |
-          const a = [1, 2];
-          const b = [3, 4];
-          const c = [5, 6];
-          const merged = a.concat(b, c);
-          // [1, 2, 3, 4, 5, 6]
-
-          // Prefer spread operator for readability
-          const spreadMerged = [...a, ...b, ...c];
-        tags: [combination, immutable]
-
-      - name: join
-        signature: "(separator?: string): string"
-        description: "Join all elements into a string with the given separator."
-        returns: "string"
-        example: |
-          const words = ["Hello", "World"];
-          words.join(" ");  // "Hello World"
-
-          const csv = ["name", "age", "email"];
-          csv.join(",");    // "name,age,email"
-
-          const path = ["usr", "local", "bin"];
-          path.join("/");   // "usr/local/bin"
-        tags: [transformation, string]
-
-      - name: at
-        signature: "(index: number): T | undefined"
-        description: "Return the element at the given index, supporting negative indices."
-        returns: "T | undefined"
-        example: |
-          const letters = ["a", "b", "c", "d", "e"];
-          letters.at(0);   // "a"
-          letters.at(2);   // "c"
-          letters.at(-1);  // "e"
-          letters.at(-2);  // "d"
-        tags: [access]
-
-      - name: with
-        signature: "(index: number, value: T): T[]"
-        description: "Return a new array with the element at the given index replaced."
-        returns: "T[]"
-        example: |
-          const arr = [1, 2, 3, 4, 5];
-          const updated = arr.with(2, 99);
-          // [1, 2, 99, 4, 5]
-          // arr is unchanged: [1, 2, 3, 4, 5]
-        tags: [immutable, transformation]
-
-      - name: toSorted
-        signature: "(compareFn?: (a: T, b: T) => number): T[]"
-        description: "Return a new sorted array without modifying the original."
-        returns: "T[]"
-        example: |
-          const numbers = [3, 1, 4, 1, 5, 9];
-          const sorted = numbers.toSorted((a, b) => a - b);
-          // [1, 1, 3, 4, 5, 9]
-          // numbers is unchanged: [3, 1, 4, 1, 5, 9]
-        tags: [immutable, sorting]
-
-      - name: toReversed
-        signature: "(): T[]"
-        description: "Return a new reversed array without modifying the original."
-        returns: "T[]"
-        example: |
-          const letters = ["a", "b", "c", "d"];
-          const reversed = letters.toReversed();
-          // ["d", "c", "b", "a"]
-          // letters is unchanged: ["a", "b", "c", "d"]
-        tags: [immutable]
-
-      - name: toSpliced
-        signature: "(start: number, deleteCount?: number, ...items: T[]): T[]"
-        description: "Return a new array with elements added/removed without modifying the original."
-        returns: "T[]"
-        example: |
-          const months = ["Jan", "Mar", "Apr", "Dec"];
-          const fixed = months.toSpliced(1, 0, "Feb");
-          // ["Jan", "Feb", "Mar", "Apr", "Dec"]
-          // months is unchanged
-
-          const replaced = months.toSpliced(-1, 1, "Nov", "Dec");
-          // ["Jan", "Mar", "Apr", "Nov", "Dec"]
-        tags: [immutable, transformation]
-
-      - name: findLast
-        signature: "(predicate: (value: T, index: number, array: T[]) => boolean): T | undefined"
-        description: "Return the last element matching the predicate, searching from the end."
-        returns: "T | undefined"
-        example: |
-          const numbers = [1, 2, 3, 4, 5, 6, 7, 8];
-          const lastEven = numbers.findLast((n) => n % 2 === 0);
-          // 8
-
-          const users = [
-            { name: "Alice", role: "admin" },
-            { name: "Bob", role: "user" },
-            { name: "Charlie", role: "admin" },
-          ];
-          const lastAdmin = users.findLast((u) => u.role === "admin");
-          // { name: "Charlie", role: "admin" }
-        tags: [search]
-
-      - name: findLastIndex
-        signature: "(predicate: (value: T, index: number, array: T[]) => boolean): number"
-        description: "Return the index of the last element matching the predicate, or -1."
-        returns: "number"
-        example: |
-          const numbers = [1, 2, 3, 4, 3, 2, 1];
-          const idx = numbers.findLastIndex((n) => n === 3);
-          // 4
-
-          const notFound = numbers.findLastIndex((n) => n === 99);
-          // -1
-        tags: [search]
-
-  # =========================================================================
-  # Map
-  # =========================================================================
+          const timeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout")), 5000)
+          );
+          const result = await Promise.race([fetchData(), timeout]);
+        tags: [async, race]
 
   Map:
     description: "Key-value collection that preserves insertion order and supports any key type."
@@ -367,26 +80,15 @@ stdlib:
         example: |
           const config = new Map<string, string>();
           config.set("host", "localhost").set("port", "3000");
-
-          // Any type as key
-          const metadata = new Map<object, string>();
-          const token = { id: 1 };
-          metadata.set(token, "active");
         tags: [mutation]
-
       - name: get
         signature: "(key: K): V | undefined"
         description: "Return the value for the given key, or undefined if not found."
         returns: "V | undefined"
         example: |
-          const env = new Map<string, string>([
-            ["NODE_ENV", "production"],
-            ["PORT", "8080"],
-          ]);
+          const env = new Map([["NODE_ENV", "production"]]);
           env.get("NODE_ENV"); // "production"
-          env.get("MISSING");  // undefined
         tags: [access]
-
       - name: has
         signature: "(key: K): boolean"
         description: "Return true if the map contains the given key."
@@ -394,569 +96,37 @@ stdlib:
         example: |
           const cache = new Map<string, unknown>();
           cache.set("user:1", { name: "Alice" });
-
           cache.has("user:1"); // true
-          cache.has("user:2"); // false
         tags: [testing]
 
-      - name: delete
-        signature: "(key: K): boolean"
-        description: "Remove the entry for the given key. Returns true if the key existed."
-        returns: "boolean"
-        example: |
-          const sessions = new Map<string, Session>();
-          sessions.set("abc", { userId: 1 });
-
-          sessions.delete("abc"); // true
-          sessions.delete("xyz"); // false
-        tags: [mutation]
-
-      - name: clear
-        signature: "(): void"
-        description: "Remove all entries from the map."
-        returns: "void"
-        example: |
-          const cache = new Map<string, unknown>();
-          cache.set("a", 1);
-          cache.set("b", 2);
-          cache.clear();
-          cache.size; // 0
-        tags: [mutation]
-
-      - name: keys
-        signature: "(): MapIterator<K>"
-        description: "Return an iterator over the map's keys in insertion order."
-        returns: "MapIterator<K>"
-        example: |
-          const map = new Map([["a", 1], ["b", 2], ["c", 3]]);
-          for (const key of map.keys()) {
-            console.log(key); // "a", "b", "c"
-          }
-        tags: [iteration]
-
-      - name: values
-        signature: "(): MapIterator<V>"
-        description: "Return an iterator over the map's values in insertion order."
-        returns: "MapIterator<V>"
-        example: |
-          const scores = new Map([["Alice", 95], ["Bob", 87]]);
-          const allScores = [...scores.values()];
-          // [95, 87]
-        tags: [iteration]
-
-      - name: entries
-        signature: "(): MapIterator<[K, V]>"
-        description: "Return an iterator over the map's [key, value] pairs in insertion order."
-        returns: "MapIterator<[K, V]>"
-        example: |
-          const map = new Map([["x", 10], ["y", 20]]);
-          for (const [key, value] of map.entries()) {
-            console.log(`${key}: ${value}`);
-          }
-        tags: [iteration]
-
-      - name: forEach
-        signature: "(callbackfn: (value: V, key: K, map: Map<K, V>) => void): void"
-        description: "Execute a function for each key-value pair in insertion order."
-        returns: "void"
-        example: |
-          const headers = new Map([
-            ["Content-Type", "application/json"],
-            ["Authorization", "Bearer token"],
-          ]);
-          headers.forEach((value, key) => {
-            console.log(`${key}: ${value}`);
-          });
-        tags: [iteration]
-
-      - name: size
-        signature: "number (property)"
-        description: "The number of key-value pairs in the map."
-        returns: "number"
-        example: |
-          const map = new Map([["a", 1], ["b", 2]]);
-          map.size; // 2
-
-          map.set("c", 3);
-          map.size; // 3
-        tags: [property]
-
-  # =========================================================================
-  # Set
-  # =========================================================================
-
-  Set:
-    description: "Collection of unique values with set-theoretic operations (ES2024+)."
+  String:
+    description: "Built-in string object with methods for text manipulation and searching."
     methods:
-      - name: add
-        signature: "(value: T): this"
-        description: "Add a value to the set. Returns the set for chaining. Ignored if value already exists."
-        returns: "this"
+      - name: split
+        signature: "(separator: string | RegExp, limit?: number): string[]"
+        description: "Split the string into an array of substrings using the separator."
+        returns: "string[]"
         example: |
-          const tags = new Set<string>();
-          tags.add("typescript").add("node").add("react");
-
-          tags.add("typescript"); // no effect, already present
-          tags.size; // 3
-        tags: [mutation]
-
-      - name: has
-        signature: "(value: T): boolean"
-        description: "Return true if the set contains the given value."
+          const csv = "red,green,blue";
+          const colors = csv.split(",");
+          // ["red", "green", "blue"]
+        tags: [splitting, transformation]
+      - name: includes
+        signature: "(searchString: string, position?: number): boolean"
+        description: "Return true if the string contains the search string."
         returns: "boolean"
         example: |
-          const permissions = new Set(["read", "write", "admin"]);
-          permissions.has("read");  // true
-          permissions.has("delete"); // false
-        tags: [testing]
-
-      - name: delete
-        signature: "(value: T): boolean"
-        description: "Remove the value from the set. Returns true if it existed."
-        returns: "boolean"
+          const message = "Hello, World!";
+          message.includes("World"); // true
+        tags: [search, boolean]
+      - name: replaceAll
+        signature: "(pattern: string | RegExp, replacement: string): string"
+        description: "Replace all occurrences of a pattern with the replacement string."
+        returns: "string"
         example: |
-          const active = new Set(["user1", "user2", "user3"]);
-          active.delete("user2"); // true
-          active.delete("user9"); // false
-        tags: [mutation]
-
-      - name: clear
-        signature: "(): void"
-        description: "Remove all values from the set."
-        returns: "void"
-        example: |
-          const set = new Set([1, 2, 3]);
-          set.clear();
-          set.size; // 0
-        tags: [mutation]
-
-      - name: keys
-        signature: "(): SetIterator<T>"
-        description: "Return an iterator over the set's values (same as values())."
-        returns: "SetIterator<T>"
-        example: |
-          const set = new Set(["a", "b", "c"]);
-          [...set.keys()]; // ["a", "b", "c"]
-        tags: [iteration]
-
-      - name: values
-        signature: "(): SetIterator<T>"
-        description: "Return an iterator over the set's values."
-        returns: "SetIterator<T>"
-        example: |
-          const ids = new Set([101, 102, 103]);
-          for (const id of ids.values()) {
-            console.log(id);
-          }
-        tags: [iteration]
-
-      - name: entries
-        signature: "(): SetIterator<[T, T]>"
-        description: "Return an iterator of [value, value] pairs for compatibility with Map."
-        returns: "SetIterator<[T, T]>"
-        example: |
-          const set = new Set(["x", "y"]);
-          for (const [val1, val2] of set.entries()) {
-            console.log(val1, val2); // "x" "x", "y" "y"
-          }
-        tags: [iteration]
-
-      - name: forEach
-        signature: "(callbackfn: (value: T, value2: T, set: Set<T>) => void): void"
-        description: "Execute a function for each value in insertion order."
-        returns: "void"
-        example: |
-          const visited = new Set(["/home", "/about", "/contact"]);
-          visited.forEach((url) => {
-            console.log(`Visited: ${url}`);
-          });
-        tags: [iteration]
-
-      - name: size
-        signature: "number (property)"
-        description: "The number of values in the set."
-        returns: "number"
-        example: |
-          const unique = new Set([1, 2, 2, 3, 3, 3]);
-          unique.size; // 3
-        tags: [property]
-
-      - name: union
-        signature: "(other: Set<T>): Set<T>"
-        description: "Return a new set with all elements from both sets."
-        returns: "Set<T>"
-        example: |
-          const frontend = new Set(["React", "Vue"]);
-          const backend = new Set(["Express", "Fastify"]);
-          const all = frontend.union(backend);
-          // Set {"React", "Vue", "Express", "Fastify"}
-        tags: [set-operation, immutable]
-
-      - name: intersection
-        signature: "(other: Set<T>): Set<T>"
-        description: "Return a new set with elements present in both sets."
-        returns: "Set<T>"
-        example: |
-          const jsDevs = new Set(["Alice", "Bob", "Charlie"]);
-          const tsDevs = new Set(["Bob", "Charlie", "Diana"]);
-          const both = jsDevs.intersection(tsDevs);
-          // Set {"Bob", "Charlie"}
-        tags: [set-operation, immutable]
-
-      - name: difference
-        signature: "(other: Set<T>): Set<T>"
-        description: "Return a new set with elements in this set but not in the other."
-        returns: "Set<T>"
-        example: |
-          const allUsers = new Set(["Alice", "Bob", "Charlie", "Diana"]);
-          const banned = new Set(["Charlie"]);
-          const allowed = allUsers.difference(banned);
-          // Set {"Alice", "Bob", "Diana"}
-        tags: [set-operation, immutable]
-
-      - name: symmetricDifference
-        signature: "(other: Set<T>): Set<T>"
-        description: "Return a new set with elements in either set but not in both."
-        returns: "Set<T>"
-        example: |
-          const setA = new Set([1, 2, 3]);
-          const setB = new Set([3, 4, 5]);
-          const result = setA.symmetricDifference(setB);
-          // Set {1, 2, 4, 5}
-        tags: [set-operation, immutable]
-
-      - name: isSubsetOf
-        signature: "(other: Set<T>): boolean"
-        description: "Return true if every element in this set is also in the other set."
-        returns: "boolean"
-        example: |
-          const required = new Set(["read", "write"]);
-          const userPerms = new Set(["read", "write", "admin"]);
-          required.isSubsetOf(userPerms); // true
-
-          const basic = new Set(["read"]);
-          required.isSubsetOf(basic); // false
-        tags: [set-operation, testing]
-
-      - name: isSupersetOf
-        signature: "(other: Set<T>): boolean"
-        description: "Return true if this set contains every element of the other set."
-        returns: "boolean"
-        example: |
-          const adminPerms = new Set(["read", "write", "delete", "admin"]);
-          const requiredPerms = new Set(["read", "write"]);
-          adminPerms.isSupersetOf(requiredPerms); // true
-        tags: [set-operation, testing]
-
-  # =========================================================================
-  # Promise
-  # =========================================================================
-
-  Promise:
-    description: "Asynchronous computation that eventually resolves to a value or rejects with an error."
-    methods:
-      - name: all
-        signature: "<T>(values: Iterable<T | PromiseLike<T>>): Promise<Awaited<T>[]>"
-        description: "Wait for all promises to resolve. Rejects immediately on the first rejection."
-        returns: "Promise<Awaited<T>[]>"
-        example: |
-          const [users, posts, comments] = await Promise.all([
-            fetchUsers(),
-            fetchPosts(),
-            fetchComments(),
-          ]);
-
-          // All three requests run in parallel
-          // Result is available only when ALL resolve
-        tags: [async, parallel]
-
-      - name: allSettled
-        signature: "<T>(values: Iterable<T | PromiseLike<T>>): Promise<PromiseSettledResult<Awaited<T>>[]>"
-        description: "Wait for all promises to settle (resolve or reject). Never rejects."
-        returns: "Promise<PromiseSettledResult<Awaited<T>>[]>"
-        example: |
-          const results = await Promise.allSettled([
-            fetchFromPrimary(),
-            fetchFromSecondary(),
-            fetchFromCache(),
-          ]);
-
-          const successful = results
-            .filter((r): r is PromiseFulfilledResult<Data> => r.status === "fulfilled")
-            .map((r) => r.value);
-
-          const failed = results
-            .filter((r): r is PromiseRejectedResult => r.status === "rejected")
-            .map((r) => r.reason);
-        tags: [async, resilient]
-
-      - name: race
-        signature: "<T>(values: Iterable<T | PromiseLike<T>>): Promise<Awaited<T>>"
-        description: "Return the first promise to settle (resolve or reject)."
-        returns: "Promise<Awaited<T>>"
-        example: |
-          // Timeout pattern
-          const timeout = new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error("Timeout")), 5000);
-          });
-
-          const result = await Promise.race([
-            fetchSlowAPI(),
-            timeout,
-          ]);
-        tags: [async, race]
-
-      - name: any
-        signature: "<T>(values: Iterable<T | PromiseLike<T>>): Promise<Awaited<T>>"
-        description: "Return the first promise to resolve. Rejects only if ALL promises reject."
-        returns: "Promise<Awaited<T>>"
-        example: |
-          // Try multiple CDN mirrors
-          const data = await Promise.any([
-            fetch("https://cdn1.example.com/data.json"),
-            fetch("https://cdn2.example.com/data.json"),
-            fetch("https://cdn3.example.com/data.json"),
-          ]);
-        tags: [async, resilient]
-
-      - name: resolve
-        signature: "<T>(value: T | PromiseLike<T>): Promise<Awaited<T>>"
-        description: "Create a resolved promise with the given value."
-        returns: "Promise<Awaited<T>>"
-        example: |
-          const cachedUser = Promise.resolve({ id: 1, name: "Alice" });
-
-          // Wrap a potentially sync value
-          function getUser(id: string): Promise<User> {
-            const cached = cache.get(id);
-            return cached ? Promise.resolve(cached) : fetchUser(id);
-          }
-        tags: [async, creation]
-
-      - name: reject
-        signature: "(reason?: unknown): Promise<never>"
-        description: "Create a rejected promise with the given reason."
-        returns: "Promise<never>"
-        example: |
-          function validateId(id: string): Promise<string> {
-            if (!id.trim()) {
-              return Promise.reject(new ValidationError("ID cannot be empty"));
-            }
-            return Promise.resolve(id);
-          }
-        tags: [async, creation]
-
-      - name: withResolvers
-        signature: "<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (reason?: unknown) => void }"
-        description: "Create a promise with externally accessible resolve and reject functions."
-        returns: "{ promise, resolve, reject }"
-        example: |
-          // Useful for converting callback-based APIs
-          function waitForEvent(emitter: EventEmitter, event: string): Promise<Event> {
-            const { promise, resolve, reject } = Promise.withResolvers<Event>();
-
-            emitter.once(event, resolve);
-            emitter.once("error", reject);
-
-            return promise;
-          }
-
-          // Queue processing with backpressure
-          function createQueue<T>() {
-            const { promise, resolve } = Promise.withResolvers<T>();
-            let resolveNext: ((value: T) => void) | null = null;
-
-            return {
-              push(value: T) {
-                resolveNext?.(value);
-              },
-              async pop(): Promise<T> {
-                const { promise: next, resolve: r } = Promise.withResolvers<T>();
-                resolveNext = r;
-                return next;
-              },
-            };
-          }
-        tags: [async, advanced]
-
-  # =========================================================================
-  # Object
-  # =========================================================================
-
-  Object:
-    description: "Static utility methods for working with objects."
-    methods:
-      - name: keys
-        signature: "<T>(obj: T): (keyof T)[]"
-        description: "Return an array of the object's own enumerable property names."
-        returns: "(keyof T)[]"
-        example: |
-          const user = { name: "Alice", age: 30, email: "alice@example.com" };
-          Object.keys(user); // ["name", "age", "email"]
-
-          // Type-safe iteration
-          for (const key of Object.keys(user) as Array<keyof typeof user>) {
-            console.log(`${key}: ${user[key]}`);
-          }
-        tags: [introspection]
-
-      - name: values
-        signature: "<T>(obj: T): T[keyof T][]"
-        description: "Return an array of the object's own enumerable property values."
-        returns: "T[keyof T][]"
-        example: |
-          const config = { host: "localhost", port: 3000, ssl: true };
-          Object.values(config); // ["localhost", 3000, true]
-
-          // Sum all numeric values
-          const metrics = { cpu: 45, memory: 72, disk: 30 };
-          const total = Object.values(metrics).reduce((a, b) => a + b, 0);
-        tags: [introspection]
-
-      - name: entries
-        signature: "<T>(obj: T): [keyof T, T[keyof T]][]"
-        description: "Return an array of the object's own enumerable [key, value] pairs."
-        returns: "[keyof T, T[keyof T]][]"
-        example: |
-          const settings = { theme: "dark", lang: "en", fontSize: 14 };
-          Object.entries(settings);
-          // [["theme", "dark"], ["lang", "en"], ["fontSize", 14]]
-
-          // Convert object to query string
-          const params = { page: 1, limit: 20, sort: "name" };
-          const query = Object.entries(params)
-            .map(([key, val]) => `${key}=${val}`)
-            .join("&");
-          // "page=1&limit=20&sort=name"
-        tags: [introspection, transformation]
-
-      - name: assign
-        signature: "<T extends object, U>(target: T, source: U): T & U"
-        description: "Copy all enumerable own properties from source objects to the target object."
-        returns: "T & U"
-        example: |
-          const defaults = { theme: "light", lang: "en", debug: false };
-          const userPrefs = { theme: "dark" };
-          const config = Object.assign({}, defaults, userPrefs);
-          // { theme: "dark", lang: "en", debug: false }
-
-          // Prefer spread operator for readability
-          const configSpread = { ...defaults, ...userPrefs };
-        tags: [mutation, composition]
-
-      - name: create
-        signature: "<T extends object>(proto: T | null, propertiesObject?: PropertyDescriptorMap): T"
-        description: "Create a new object with the specified prototype."
-        returns: "T"
-        example: |
-          // Create with null prototype (no inherited properties)
-          const pureObject = Object.create(null);
-          pureObject.toString; // undefined
-
-          // Create with custom prototype
-          const base = { greet() { return `Hello, ${this.name}`; } };
-          const user = Object.create(base);
-          user.name = "Alice";
-          user.greet(); // "Hello, Alice"
-        tags: [creation, prototype]
-
-      - name: freeze
-        signature: "<T extends object>(obj: T): Readonly<T>"
-        description: "Freeze an object, preventing new properties, modifications, or deletions. Shallow."
-        returns: "Readonly<T>"
-        example: |
-          const config = Object.freeze({
-            apiUrl: "https://api.example.com",
-            timeout: 5000,
-          });
-
-          // config.apiUrl = "other"; // TypeError in strict mode
-          // config.newProp = true;   // TypeError in strict mode
-
-          // Note: freeze is shallow
-          const nested = Object.freeze({ settings: { theme: "dark" } });
-          nested.settings.theme = "light"; // This works! Deep freeze needs recursive approach
-        tags: [immutability]
-
-      - name: seal
-        signature: "<T extends object>(obj: T): T"
-        description: "Seal an object, preventing adding/removing properties but allowing modification of existing ones."
-        returns: "T"
-        example: |
-          const user = Object.seal({ name: "Alice", age: 30 });
-          user.age = 31; // OK: modifying existing property
-          // user.email = "alice@example.com"; // TypeError: cannot add property
-          // delete user.name; // TypeError: cannot delete property
-        tags: [immutability]
-
-      - name: fromEntries
-        signature: "<T>(entries: Iterable<readonly [PropertyKey, T]>): { [k: string]: T }"
-        description: "Create an object from an iterable of [key, value] pairs. Inverse of Object.entries."
-        returns: "{ [k: string]: T }"
-        example: |
-          // From array of pairs
-          const obj = Object.fromEntries([["a", 1], ["b", 2]]);
-          // { a: 1, b: 2 }
-
-          // Convert Map to object
-          const map = new Map([["x", 10], ["y", 20]]);
-          const plain = Object.fromEntries(map);
-          // { x: 10, y: 20 }
-
-          // Rebuild object with transformed values
-          const config = { port: "3000", timeout: "5000" };
-          const typed = Object.fromEntries(
-            Object.entries(config).map(([k, v]) => [k, Number(v)])
-          );
-          // { port: 3000, timeout: 5000 }
-        tags: [transformation]
-
-      - name: groupBy
-        signature: "<T, K extends PropertyKey>(items: Iterable<T>, keyFn: (item: T) => K): Record<K, T[]>"
-        description: "Group items by the key returned from the callback function."
-        returns: "Record<K, T[]>"
-        example: |
-          const people = [
-            { name: "Alice", department: "Engineering" },
-            { name: "Bob", department: "Design" },
-            { name: "Charlie", department: "Engineering" },
-            { name: "Diana", department: "Design" },
-          ];
-
-          const byDept = Object.groupBy(people, (p) => p.department);
-          // {
-          //   Engineering: [{ name: "Alice", ... }, { name: "Charlie", ... }],
-          //   Design: [{ name: "Bob", ... }, { name: "Diana", ... }],
-          // }
-
-          // Group by status
-          const tasks = [
-            { id: 1, status: "todo" },
-            { id: 2, status: "done" },
-            { id: 3, status: "todo" },
-          ];
-          const byStatus = Object.groupBy(tasks, (t) => t.status);
-        tags: [grouping, transformation]
-
-      - name: hasOwn
-        signature: "(obj: object, key: PropertyKey): boolean"
-        description: "Return true if the object has the specified property as its own property."
-        returns: "boolean"
-        example: |
-          const user = { name: "Alice", age: 30 };
-          Object.hasOwn(user, "name");   // true
-          Object.hasOwn(user, "toString"); // false (inherited)
-
-          // Safer than obj.hasOwnProperty (works with null prototype objects)
-          const pure = Object.create(null);
-          pure.key = "value";
-          Object.hasOwn(pure, "key"); // true
-          // pure.hasOwnProperty("key"); // TypeError
-        tags: [testing, introspection]
-
-  # =========================================================================
-  # JSON
-  # =========================================================================
+          const template = "Hello {name}! Welcome to {place}.";
+          const result = template.replaceAll("{name}", "Alice").replaceAll("{place}", "NYC");
+        tags: [transformation, replacement]
 
   JSON:
     description: "Methods for parsing and serializing JSON data."
@@ -966,369 +136,17 @@ stdlib:
         description: "Parse a JSON string into a JavaScript value."
         returns: "unknown"
         example: |
-          // Basic parsing
           const data = JSON.parse('{"name": "Alice", "age": 30}') as {
             name: string;
             age: number;
           };
-
-          // With reviver for custom transformations
-          const raw = '{"date": "2024-01-15T10:30:00Z", "name": "Event"}';
-          const parsed = JSON.parse(raw, (key, value) => {
-            if (key === "date") return new Date(value as string);
-            return value;
-          });
-
-          // Safe parsing with error handling
-          function safeParse<T>(json: string): T | null {
-            try {
-              return JSON.parse(json) as T;
-            } catch {
-              return null;
-            }
-          }
         tags: [serialization, deserialization]
-
       - name: stringify
         signature: "(value: unknown, replacer?: ((key: string, value: unknown) => unknown) | null, space?: string | number): string"
         description: "Serialize a JavaScript value to a JSON string."
         returns: "string"
         example: |
-          // Basic serialization
           const user = { name: "Alice", age: 30 };
-          JSON.stringify(user); // '{"name":"Alice","age":30}'
-
-          // Pretty-printed
           JSON.stringify(user, null, 2);
-
-          // With replacer to filter keys
-          const sensitive = { name: "Alice", password: "secret", age: 30 };
-          const safe = JSON.stringify(sensitive, (key, value) =>
-            key === "password" ? undefined : value
-          );
-          // '{"name":"Alice","age":30}'
-
-          // Serialize with custom key ordering
-          JSON.stringify(user, ["name", "age"]);
+          // {\n  "name": "Alice",\n  "age": 30\n}
         tags: [serialization]
-
-  # =========================================================================
-  # node:fs/promises
-  # =========================================================================
-
-  "node:fs/promises":
-    description: "Promise-based filesystem operations for Node.js."
-    methods:
-      - name: readFile
-        signature: "(path: PathLike | FileHandle, options?: { encoding?: BufferEncoding; flag?: string }): Promise<string | Buffer>"
-        description: "Read the entire contents of a file."
-        returns: "Promise<string | Buffer>"
-        example: |
-          import { readFile } from "node:fs/promises";
-
-          // Read as string
-          const content = await readFile("config.json", "utf-8");
-          const config = JSON.parse(content) as Config;
-
-          // Read as Buffer
-          const imageBuffer = await readFile("photo.png");
-
-          // With error handling
-          async function readConfig(path: string): Promise<Config | null> {
-            try {
-              const data = await readFile(path, "utf-8");
-              return JSON.parse(data) as Config;
-            } catch (error) {
-              if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-                return null;
-              }
-              throw error;
-            }
-          }
-        tags: [io, file, read]
-
-      - name: writeFile
-        signature: "(path: PathLike | FileHandle, data: string | Buffer, options?: { encoding?: BufferEncoding; mode?: number; flag?: string }): Promise<void>"
-        description: "Write data to a file, replacing it if it exists."
-        returns: "Promise<void>"
-        example: |
-          import { writeFile } from "node:fs/promises";
-
-          // Write string
-          await writeFile("output.txt", "Hello, World!");
-
-          // Write JSON with pretty-print
-          const data = { users: [{ name: "Alice" }] };
-          await writeFile("data.json", JSON.stringify(data, null, 2), "utf-8");
-
-          // Atomic write pattern
-          async function atomicWrite(path: string, data: string): Promise<void> {
-            const tmpPath = `${path}.tmp`;
-            await writeFile(tmpPath, data, "utf-8");
-            await rename(tmpPath, path);
-          }
-        tags: [io, file, write]
-
-      - name: readdir
-        signature: "(path: PathLike, options?: { encoding?: BufferEncoding; withFileTypes?: boolean; recursive?: boolean }): Promise<string[] | Dirent[]>"
-        description: "Read the contents of a directory."
-        returns: "Promise<string[] | Dirent[]>"
-        example: |
-          import { readdir } from "node:fs/promises";
-
-          // List file names
-          const files = await readdir("./src");
-          // ["index.ts", "utils.ts", "types.ts"]
-
-          // With file type information
-          const entries = await readdir("./src", { withFileTypes: true });
-          for (const entry of entries) {
-            if (entry.isFile()) {
-              console.log(`File: ${entry.name}`);
-            } else if (entry.isDirectory()) {
-              console.log(`Dir: ${entry.name}`);
-            }
-          }
-
-          // Recursive listing
-          const allFiles = await readdir("./src", { recursive: true });
-        tags: [io, directory]
-
-      - name: mkdir
-        signature: "(path: PathLike, options?: { recursive?: boolean; mode?: number }): Promise<string | undefined>"
-        description: "Create a directory. With recursive option, creates parent directories as needed."
-        returns: "Promise<string | undefined>"
-        example: |
-          import { mkdir } from "node:fs/promises";
-
-          // Create single directory
-          await mkdir("./output");
-
-          // Create nested directories
-          await mkdir("./output/reports/2024", { recursive: true });
-
-          // Ensure directory exists (idempotent)
-          async function ensureDir(path: string): Promise<void> {
-            await mkdir(path, { recursive: true });
-          }
-        tags: [io, directory]
-
-      - name: rm
-        signature: "(path: PathLike, options?: { recursive?: boolean; force?: boolean }): Promise<void>"
-        description: "Remove a file or directory."
-        returns: "Promise<void>"
-        example: |
-          import { rm } from "node:fs/promises";
-
-          // Remove a file
-          await rm("temp.txt");
-
-          // Remove directory and contents
-          await rm("./build", { recursive: true, force: true });
-
-          // Safe cleanup (no error if missing)
-          async function cleanup(path: string): Promise<void> {
-            await rm(path, { recursive: true, force: true });
-          }
-        tags: [io, file, directory]
-
-      - name: stat
-        signature: "(path: PathLike, options?: { bigint?: boolean }): Promise<Stats>"
-        description: "Get file or directory metadata (size, timestamps, type)."
-        returns: "Promise<Stats>"
-        example: |
-          import { stat } from "node:fs/promises";
-
-          const info = await stat("data.json");
-
-          console.log(`Size: ${info.size} bytes`);
-          console.log(`Is file: ${info.isFile()}`);
-          console.log(`Is directory: ${info.isDirectory()}`);
-          console.log(`Modified: ${info.mtime.toISOString()}`);
-
-          // Check if file exists
-          async function fileExists(path: string): Promise<boolean> {
-            try {
-              await stat(path);
-              return true;
-            } catch {
-              return false;
-            }
-          }
-        tags: [io, metadata]
-
-      - name: access
-        signature: "(path: PathLike, mode?: number): Promise<void>"
-        description: "Test whether a file can be accessed with the specified permissions."
-        returns: "Promise<void>"
-        example: |
-          import { access, constants } from "node:fs/promises";
-
-          // Check read permission
-          async function isReadable(path: string): Promise<boolean> {
-            try {
-              await access(path, constants.R_OK);
-              return true;
-            } catch {
-              return false;
-            }
-          }
-
-          // Check write permission
-          await access("config.json", constants.W_OK);
-        tags: [io, permissions]
-
-      - name: copyFile
-        signature: "(src: PathLike, dest: PathLike, mode?: number): Promise<void>"
-        description: "Copy a file from source to destination."
-        returns: "Promise<void>"
-        example: |
-          import { copyFile, constants } from "node:fs/promises";
-
-          // Basic copy
-          await copyFile("template.txt", "output.txt");
-
-          // Copy without overwriting (COPYFILE_EXCL)
-          try {
-            await copyFile("source.txt", "dest.txt", constants.COPYFILE_EXCL);
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-              console.log("Destination already exists");
-            }
-          }
-        tags: [io, file]
-
-      - name: rename
-        signature: "(oldPath: PathLike, newPath: PathLike): Promise<void>"
-        description: "Rename or move a file or directory."
-        returns: "Promise<void>"
-        example: |
-          import { rename } from "node:fs/promises";
-
-          // Rename a file
-          await rename("old-name.txt", "new-name.txt");
-
-          // Move a file
-          await rename("./temp/report.pdf", "./archive/report-2024.pdf");
-
-          // Atomic write: write to temp, then rename
-          import { writeFile } from "node:fs/promises";
-
-          async function atomicWrite(path: string, data: string): Promise<void> {
-            const tmpPath = `${path}.tmp.${Date.now()}`;
-            await writeFile(tmpPath, data, "utf-8");
-            await rename(tmpPath, path);
-          }
-        tags: [io, file]
-
-  # =========================================================================
-  # node:path
-  # =========================================================================
-
-  "node:path":
-    description: "Utilities for working with file and directory paths."
-    methods:
-      - name: join
-        signature: "(...paths: string[]): string"
-        description: "Join all given path segments together, normalizing the resulting path."
-        returns: "string"
-        example: |
-          import path from "node:path";
-
-          path.join("usr", "local", "bin");    // "usr/local/bin" (POSIX)
-          path.join("/home", "user", "..");    // "/home" (normalizes ..)
-          path.join("src", "utils", "index.ts"); // "src/utils/index.ts"
-
-          // Common usage
-          const projectRoot = process.cwd();
-          const srcDir = path.join(projectRoot, "src");
-          const outputFile = path.join(srcDir, "dist", "bundle.js");
-        tags: [path, manipulation]
-
-      - name: resolve
-        signature: "(...paths: string[]): string"
-        description: "Resolve a sequence of paths into an absolute path."
-        returns: "string"
-        example: |
-          import path from "node:path";
-
-          path.resolve("src", "index.ts");
-          // "/home/user/project/src/index.ts"
-
-          path.resolve("/tmp", "test", "..", "file.txt");
-          // "/tmp/file.txt"
-
-          // Resolve relative to project root
-          const configPath = path.resolve(process.cwd(), "config", "app.json");
-        tags: [path, absolute]
-
-      - name: dirname
-        signature: "(p: string): string"
-        description: "Return the directory portion of a path."
-        returns: "string"
-        example: |
-          import path from "node:path";
-
-          path.dirname("/home/user/file.txt");  // "/home/user"
-          path.dirname("src/utils/index.ts");   // "src/utils"
-          path.dirname("file.txt");             // "."
-        tags: [path, extraction]
-
-      - name: basename
-        signature: "(p: string, ext?: string): string"
-        description: "Return the last portion of a path, optionally removing a file extension."
-        returns: "string"
-        example: |
-          import path from "node:path";
-
-          path.basename("/home/user/file.txt");       // "file.txt"
-          path.basename("/home/user/file.txt", ".txt"); // "file"
-          path.basename("src/components/Button.tsx");   // "Button.tsx"
-        tags: [path, extraction]
-
-      - name: extname
-        signature: "(p: string): string"
-        description: "Return the file extension of a path."
-        returns: "string"
-        example: |
-          import path from "node:path";
-
-          path.extname("index.ts");      // ".ts"
-          path.extname("archive.tar.gz"); // ".gz"
-          path.extname("Makefile");       // ""
-          path.extname(".gitignore");     // ""
-        tags: [path, extraction]
-
-      - name: relative
-        signature: "(from: string, to: string): string"
-        description: "Return the relative path from one path to another."
-        returns: "string"
-        example: |
-          import path from "node:path";
-
-          path.relative("/home/user/project", "/home/user/project/src/index.ts");
-          // "src/index.ts"
-
-          path.relative("/home/user/project/src", "/home/user/project/dist");
-          // "../../dist"
-
-          path.relative("/a/b/c", "/a/b/c");
-          // ""
-        tags: [path, relative]
-
-      - name: normalize
-        signature: "(p: string): string"
-        description: "Normalize a path by resolving '..' and '.' segments and removing redundant separators."
-        returns: "string"
-        example: |
-          import path from "node:path";
-
-          path.normalize("/home/user/../user/./file.txt");
-          // "/home/user/file.txt"
-
-          path.normalize("src//utils///index.ts");
-          // "src/utils/index.ts"
-
-          path.normalize("a/b/../c");
-          // "a/c"
-        tags: [path, normalization]

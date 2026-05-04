@@ -1,0 +1,128 @@
+# Zig Coding Conventions
+# Minimal seed — use lang_fetch to populate comprehensive data
+
+version: "1"
+language: zig
+conventions:
+  # Naming
+  - id: naming-snake-case
+    name: "Use snake_case for variables and functions"
+    severity: warn
+    category: naming
+    description: Variables and functions use snake_case.
+    rule: "Use snake_case for variable and function names"
+    examples:
+      bad: ["const userName = \"Zig\";", "fn getValue() u32 { ... }"]
+      good: ["const user_name = \"Zig\";", "fn get_value() u32 { ... }"]
+    references:
+      - "https://ziglang.org/documentation/master/#Naming-Style"
+
+  - id: naming-pascal-case-types
+    name: "Use PascalCase for types and structs"
+    severity: warn
+    category: naming
+    description: Types, structs, enums, and unions use PascalCase.
+    rule: "Use PascalCase for type names"
+    examples:
+      bad: ["const user_info = struct { ... };"]
+      good: ["const UserInfo = struct { ... };"]
+    references:
+      - "https://ziglang.org/documentation/master/#Naming-Style"
+
+  - id: naming-screaming-snake-constants
+    name: "SCREAMING_SNAKE_CASE for comptime constants"
+    severity: warn
+    category: naming
+    description: Compile-time constants use SCREAMING_SNAKE_CASE. Runtime constants use snake_case.
+    rule: "SCREAMING_SNAKE_CASE for comptime, snake_case for runtime const"
+    examples:
+      bad: ["const max_retries = 3; // comptime known"]
+      good: ["const MAX_RETRIES = 3;", "const runtime_value = get_time(); // not comptime"]
+    references:
+      - "https://ziglang.org/documentation/master/#Naming-Style"
+
+  # Error Handling
+  - id: error-handling-try-catch
+    name: "Use try/catch for error handling"
+    severity: error
+    category: error-handling
+    description: Use try to propagate errors, catch to handle. Never silently ignore errors.
+    rule: "Use try for propagation, catch for handling; never ignore errors"
+    examples:
+      bad: ["_ = risky_operation();"]
+      good: ["const result = try risky_operation();", "const result = risky_operation() catch |err| { return err; };"]
+    references:
+      - "https://ziglang.org/documentation/master/#Error-Handling"
+
+  # Resource Management
+  - id: defer-cleanup
+    name: "Use defer for resource cleanup"
+    severity: warn
+    category: resource-management
+    description: Use defer for cleanup on scope exit, errdefer for error-only cleanup.
+    rule: "Use defer for cleanup, errdefer for error-only cleanup"
+    examples:
+      bad: ["const file = try openFile(\"data.txt\"); return try file.readAll(alloc);"]
+      good: ["const file = try openFile(\"data.txt\"); defer file.close(); return try file.readAll(alloc);"]
+    references:
+      - "https://ziglang.org/documentation/master/#defer"
+
+  # Memory
+  - id: explicit-allocator
+    name: "Pass allocators explicitly"
+    severity: error
+    category: memory
+    description: Never use global allocators. Pass Allocator as a parameter.
+    rule: "Always pass Allocator as a parameter"
+    examples:
+      bad: ["fn createBuffer() ![]u8 { return std.heap.page_allocator.alloc(u8, 1024); }"]
+      good: ["fn createBuffer(alloc: Allocator) ![]u8 { return try alloc.alloc(u8, 1024); }"]
+    references:
+      - "https://ziglang.org/documentation/master/#Memory"
+
+  # I/O (0.16)
+  - id: io-instance-required
+    name: "I/O as Interface (0.16+)"
+    severity: error
+    category: io
+    description: All I/O requires an Io instance from std.process.Init in main. Use std.testing.io in tests.
+    rule: "Accept Io from init or as parameter; use std.testing.io in tests"
+    examples:
+      bad: ["const file = try std.fs.cwd().openFile(\"data.txt\", .{});"]
+      good: ["pub fn main(init: std.process.Init) !void { const file = try init.io.cwd().openFile(\"data.txt\", .{}); }"]
+    references:
+      - "https://ziglang.org/download/0.16.0/release-notes.html"
+
+  - id: juicy-main
+    name: "Use Juicy Main pattern (0.16+)"
+    severity: error
+    category: entry-point
+    description: main receives std.process.Init providing Io, GPA allocator, arena, args, and env.
+    rule: "Use pub fn main(init: std.process.Init) !void"
+    examples:
+      bad: ["pub fn main() !void { var gpa = std.heap.GeneralPurposeAllocator(.{}){}; }"]
+      good: ["pub fn main(init: std.process.Init) !void { const gpa = init.gpa; const io = init.io; }"]
+    references:
+      - "https://ziglang.org/download/0.16.0/release-notes.html"
+
+namingConventions:
+  variables:
+    rule: "snake_case"
+    examples: ["user_name", "total_count", "is_valid"]
+  functions:
+    rule: "snake_case"
+    examples: ["get_value", "parse_json", "read_file"]
+  types:
+    rule: "PascalCase"
+    examples: ["ArrayList", "HashMap", "UserInfo"]
+  constants:
+    rule: "SCREAMING_SNAKE_CASE for comptime, snake_case for runtime"
+    examples: ["MAX_RETRIES", "BUFFER_SIZE", "runtime_value"]
+  enums:
+    rule: "PascalCase for type, snake_case for fields"
+    examples:
+      type: "ErrorKind"
+      values: ["file_not_found", "access_denied", "out_of_memory"]
+  fields:
+    rule: "snake_case"
+    examples: ["host", "port", "max_connections"]

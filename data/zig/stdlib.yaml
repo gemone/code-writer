@@ -1,0 +1,91 @@
+# Zig Standard Library Reference
+# Minimal seed — use lang_fetch to populate comprehensive data
+
+version: "1"
+modules:
+  # ---------------------------------------------------------------------------
+  # std.mem
+  # ---------------------------------------------------------------------------
+  - module: std.mem
+    type: std
+    description: Memory manipulation — comparing, copying, and searching slices.
+    methods:
+      - name: eql
+        signature: "fn eql(comptime T: type, a: []const T, b: []const T) bool"
+        description: Returns true if two slices have the same length and all elements are equal.
+        returns: bool
+        example: |
+          assert(std.mem.eql(u8, "hello", "hello"));
+        tags: [comparison, slices]
+
+      - name: find
+        signature: "fn find(comptime T: type, haystack: []const T, needle: []const T) ?usize"
+        description: Finds first occurrence of needle in haystack. Returns null if not found. (Renamed from indexOf in 0.16.)
+        returns: "?usize"
+        example: |
+          const idx = std.mem.find(u8, "hello world", "world"); // idx == 6
+        tags: [search, slices, "0.16"]
+
+  # ---------------------------------------------------------------------------
+  # std.fmt
+  # ---------------------------------------------------------------------------
+  - module: std.fmt
+    type: std
+    description: String formatting, number parsing, and format string utilities.
+    methods:
+      - name: allocPrint
+        signature: "fn allocPrint(allocator: Allocator, comptime fmt: []const u8, args: anytype) ![]u8"
+        description: Allocates and returns a formatted string.
+        returns: "![]u8"
+        example: |
+          const s = try std.fmt.allocPrint(alloc, "{d:.2}", .{3.14159});
+          defer alloc.free(s); // s == "3.14"
+        tags: [formatting, allocation]
+
+      - name: parseInt
+        signature: "fn parseInt(comptime T: type, buf: []const u8, base: u8) !T"
+        description: Parses an integer from a string with the given base (2-36).
+        returns: "!T"
+        example: |
+          const n = try std.fmt.parseInt(u32, "42", 10);
+        tags: [parsing, numbers]
+
+  # ---------------------------------------------------------------------------
+  # std.fs
+  # ---------------------------------------------------------------------------
+  - module: std.fs
+    type: std
+    description: Filesystem operations. In 0.16, use Io interface for I/O-aware operations.
+    methods:
+      - name: cwd
+        signature: "fn cwd() Dir"
+        description: Returns a handle to the current working directory.
+        returns: Dir
+        example: |
+          const dir = std.fs.cwd();
+          const file = try dir.openFile("data.txt", .{});
+          defer file.close();
+        tags: [filesystem, directory]
+
+  # ---------------------------------------------------------------------------
+  # std.debug
+  # ---------------------------------------------------------------------------
+  - module: std.debug
+    type: std
+    description: Debugging utilities — printing, assertions, and stack traces.
+    methods:
+      - name: print
+        signature: "fn print(comptime fmt: []const u8, args: anytype) void"
+        description: Prints formatted debug output to stderr.
+        returns: void
+        example: |
+          std.debug.print("value: {d}\n", .{42});
+        tags: [output, formatting]
+
+      - name: assert
+        signature: "fn assert(ok: bool) void"
+        description: Asserts a condition is true. Traps with stack trace in debug builds.
+        returns: void
+        example: |
+          std.debug.assert(x > 0);
+        tags: [assertions, testing]

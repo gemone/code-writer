@@ -1,564 +1,96 @@
-# TypeScript Design Patterns
-# Code Standards Plugin - Common Patterns
+# TypeScript Patterns Seed
+# Minimal seed — comprehensive data auto-fetched via lang_fetch
 
 patterns:
 
-  # =========================================================================
-  # Result Type Pattern
-  # =========================================================================
-
-  - name: Result Type
-    category: error-handling
+  - name: Module Pattern
+    category: structural
     description: >
-      The Result type (also known as Either or Outcome) represents a computation
-      that may fail, wrapping success and failure into a discriminated union. It
-      forces callers to handle both cases explicitly, eliminating uncaught errors
-      and making error paths part of the type system rather than invisible
-      control flow.
-    whenToUse:
-      - "When errors are expected and recoverable (validation, user input, API calls)."
-      - "When you want to avoid try/catch for non-exceptional failures."
-      - "When building libraries where callers should handle errors explicitly."
-      - "When composing multiple operations that can each fail independently."
-    relatedPatterns:
-      - "Discriminated Unions"
-      - "Builder Pattern"
-      - "Middleware Pattern"
+      Encapsulate related functionality using ES modules with named exports.
+      Provides clear public API boundaries and enables tree-shaking.
+    when:
+      - "Organizing code into cohesive units with a defined public API."
+      - "Separating concerns into testable, importable modules."
     example: |
-      // --- Result type definition ---
-      type Result<T, E = Error> =
-        | { ok: true; value: T }
-        | { ok: false; error: E };
+      // user-service.ts
+      export async function findById(id: string): Promise<User | null> { /* ... */ }
+      export async function create(data: CreateUserDTO): Promise<User> { /* ... */ }
+    relatedPatterns:
+      - "Factory Pattern"
+      - "Singleton Pattern"
 
-      function ok<T>(value: T): Result<T, never> {
-        return { ok: true, value };
-      }
-
-      function err<E>(error: E): Result<never, E> {
-        return { ok: false, error };
-      }
-
-      // --- Helper for mapping and chaining ---
-      function map<T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E> {
-        return result.ok ? ok(fn(result.value)) : result;
-      }
-
-      function flatMap<T, U, E>(
-        result: Result<T, E>,
-        fn: (value: T) => Result<U, E>,
-      ): Result<U, E> {
-        return result.ok ? fn(result.value) : result;
-      }
-
-      function unwrapOr<T, E>(result: Result<T, E>, defaultValue: T): T {
-        return result.ok ? result.value : defaultValue;
-      }
-
-      // --- Usage: parsing with Result ---
-      interface ValidationError {
-        field: string;
-        message: string;
-      }
-
-      function parseAge(input: string): Result<number, ValidationError> {
-        const age = Number(input);
-        if (Number.isNaN(age) || age < 0 || age > 150) {
-          return err({ field: "age", message: `Invalid age: "${input}"` });
-        }
-        return ok(age);
-      }
-
-      function parseEmail(input: string): Result<string, ValidationError> {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input)) {
-          return err({ field: "email", message: `Invalid email: "${input}"` });
-        }
-        return ok(input.toLowerCase().trim());
-      }
-
-      // --- Composing Results ---
-      interface UserInput {
-        name: string;
-        age: string;
-        email: string;
-      }
-
-      interface ValidUser {
-        name: string;
-        age: number;
-        email: string;
-      }
-
-      function validateUser(input: UserInput): Result<ValidUser, ValidationError[]> {
-        const errors: ValidationError[] = [];
-
-        if (!input.name.trim()) {
-          errors.push({ field: "name", message: "Name is required" });
-        }
-
-        const ageResult = parseAge(input.age);
-        const emailResult = parseEmail(input.email);
-
-        if (!ageResult.ok) errors.push(ageResult.error);
-        if (!emailResult.ok) errors.push(emailResult.error);
-
-        if (errors.length > 0) {
-          return err(errors);
-        }
-
-        return ok({
-          name: input.name.trim(),
-          age: ageResult.value,
-          email: emailResult.value,
-        });
-      }
-
-      // --- Caller handles both cases explicitly ---
-      const result = validateUser({
-        name: "Alice",
-        age: "thirty",
-        email: "alice@example.com",
-      });
-
-      if (result.ok) {
-        console.log("Valid user:", result.value);
-      } else {
-        for (const e of result.error) {
-          console.error(`${e.field}: ${e.message}`);
-        }
-      }
-
-  # =========================================================================
-  # Builder Pattern
-  # =========================================================================
-
-  - name: Builder Pattern
+  - name: Singleton Pattern
     category: creational
     description: >
-      The Builder pattern separates the construction of a complex object from
-      its representation. In TypeScript, it uses method chaining to build objects
-      step by step, providing readable construction APIs with required and
-      optional parameters, compile-time validation, and immutability.
-    whenToUse:
-      - "When constructing objects with many optional parameters."
-      - "When object creation involves multiple steps or validation."
-      - "When you want to create immutable objects with complex configuration."
-      - "When telescoping constructors become unwieldy."
-    relatedPatterns:
-      - "Result Type"
-      - "Repository Pattern"
+      Restrict a class to a single instance with a private constructor and
+      static accessor. Useful for shared resources like database connections.
+    when:
+      - "Exactly one instance must exist across the application."
+      - "Managing shared state or expensive resources."
     example: |
-      // --- Builder with step-by-step validation ---
-      interface ServerConfig {
-        readonly host: string;
-        readonly port: number;
-        readonly ssl: boolean;
-        readonly certPath?: string;
-        readonly keyPath?: string;
-        readonly maxConnections: number;
-        readonly timeout: number;
-        readonly corsOrigins: string[];
-      }
-
-      class ServerConfigBuilder {
-        private host = "localhost";
-        private port = 3000;
-        private ssl = false;
-        private certPath?: string;
-        private keyPath?: string;
-        private maxConnections = 100;
-        private timeout = 30_000;
-        private corsOrigins: string[] = [];
-
-        setHost(host: string): this {
-          this.host = host;
-          return this;
-        }
-
-        setPort(port: number): this {
-          if (port < 1 || port > 65535) {
-            throw new Error(`Invalid port: ${port}`);
-          }
-          this.port = port;
-          return this;
-        }
-
-        enableSSL(certPath: string, keyPath: string): this {
-          this.ssl = true;
-          this.certPath = certPath;
-          this.keyPath = keyPath;
-          return this;
-        }
-
-        setMaxConnections(max: number): this {
-          this.maxConnections = max;
-          return this;
-        }
-
-        setTimeout(ms: number): this {
-          this.timeout = ms;
-          return this;
-        }
-
-        allowOrigin(origin: string): this {
-          this.corsOrigins.push(origin);
-          return this;
-        }
-
-        build(): ServerConfig {
-          if (this.ssl && (!this.certPath || !this.keyPath)) {
-            throw new Error("SSL requires both certPath and keyPath");
-          }
-          return Object.freeze({
-            host: this.host,
-            port: this.port,
-            ssl: this.ssl,
-            certPath: this.certPath,
-            keyPath: this.keyPath,
-            maxConnections: this.maxConnections,
-            timeout: this.timeout,
-            corsOrigins: Object.freeze([...this.corsOrigins]),
-          });
+      class Database {
+        private static instance: Database;
+        private constructor(private url: string) {}
+        static getInstance(url: string): Database {
+          if (!Database.instance) Database.instance = new Database(url);
+          return Database.instance;
         }
       }
-
-      // --- Fluent construction ---
-      const config = new ServerConfigBuilder()
-        .setHost("0.0.0.0")
-        .setPort(8443)
-        .enableSSL("/etc/certs/server.crt", "/etc/certs/server.key")
-        .setMaxConnections(500)
-        .setTimeout(60_000)
-        .allowOrigin("https://example.com")
-        .allowOrigin("https://app.example.com")
-        .build();
-
-      // --- Generic typed builder variant ---
-      type Builder<T> = {
-        [K in keyof T as `set${Capitalize<string & K>}`]: (value: T[K]) => Builder<T>;
-      } & { build(): Readonly<T> };
-
-  # =========================================================================
-  # Repository Pattern
-  # =========================================================================
-
-  - name: Repository Pattern
-    category: architectural
-    description: >
-      The Repository pattern mediates between the domain and data mapping layers,
-      acting as an in-memory collection of domain objects. It abstracts data
-      access behind a clean interface, enabling easy testing with mocks, swapping
-      data sources without changing business logic, and enforcing consistent data
-      access patterns across the application.
-    whenToUse:
-      - "When you want to decouple business logic from data access."
-      - "When you need to support multiple data sources (database, API, in-memory)."
-      - "When testing business logic without hitting real databases."
-      - "When building domain-driven design (DDD) applications."
     relatedPatterns:
-      - "Result Type"
-      - "Builder Pattern"
-      - "Middleware Pattern"
-    example: |
-      // --- Domain model ---
-      interface User {
-        id: string;
-        name: string;
-        email: string;
-        role: "admin" | "user";
-        createdAt: Date;
-      }
+      - "Module Pattern"
+      - "Factory Pattern"
 
-      // --- Repository interface ---
-      interface Repository<T extends { id: string }> {
-        findById(id: string): Promise<T | null>;
-        findAll(filter?: Partial<T>): Promise<T[]>;
-        create(data: Omit<T, "id" | "createdAt">): Promise<T>;
-        update(id: string, data: Partial<Omit<T, "id">>): Promise<T>;
-        delete(id: string): Promise<boolean>;
-      }
-
-      // --- PostgreSQL implementation ---
-      class PostgresUserRepository implements Repository<User> {
-        constructor(private readonly db: DatabasePool) {}
-
-        async findById(id: string): Promise<User | null> {
-          const row = await this.db.query(
-            "SELECT * FROM users WHERE id = $1",
-            [id],
-          );
-          return row ? this.mapToUser(row) : null;
-        }
-
-        async findAll(filter: Partial<User> = {}): Promise<User[]> {
-          const conditions: string[] = [];
-          const values: unknown[] = [];
-          let paramIndex = 1;
-
-          for (const [key, value] of Object.entries(filter)) {
-            if (value !== undefined) {
-              conditions.push(`${key} = $${paramIndex++}`);
-              values.push(value);
-            }
-          }
-
-          const where = conditions.length > 0
-            ? `WHERE ${conditions.join(" AND ")}`
-            : "";
-
-          const rows = await this.db.query(
-            `SELECT * FROM users ${where} ORDER BY created_at DESC`,
-            values,
-          );
-
-          return rows.map(this.mapToUser);
-        }
-
-        async create(data: Omit<User, "id" | "createdAt">): Promise<User> {
-          const id = crypto.randomUUID();
-          const now = new Date();
-          await this.db.query(
-            "INSERT INTO users (id, name, email, role, created_at) VALUES ($1, $2, $3, $4, $5)",
-            [id, data.name, data.email, data.role, now],
-          );
-          return { ...data, id, createdAt: now };
-        }
-
-        async update(id: string, data: Partial<Omit<User, "id">>): Promise<User> {
-          const fields: string[] = [];
-          const values: unknown[] = [];
-          let paramIndex = 1;
-
-          for (const [key, value] of Object.entries(data)) {
-            if (value !== undefined) {
-              fields.push(`${key} = $${paramIndex++}`);
-              values.push(value);
-            }
-          }
-
-          values.push(id);
-          await this.db.query(
-            `UPDATE users SET ${fields.join(", ")} WHERE id = $${paramIndex}`,
-            values,
-          );
-
-          const updated = await this.findById(id);
-          if (!updated) throw new Error(`User ${id} not found after update`);
-          return updated;
-        }
-
-        async delete(id: string): Promise<boolean> {
-          const result = await this.db.query(
-            "DELETE FROM users WHERE id = $1",
-            [id],
-          );
-          return result.rowCount > 0;
-        }
-
-        private mapToUser(row: DatabaseRow): User {
-          return {
-            id: row.id,
-            name: row.name,
-            email: row.email,
-            role: row.role,
-            createdAt: new Date(row.created_at),
-          };
-        }
-      }
-
-      // --- In-memory implementation for tests ---
-      class InMemoryUserRepository implements Repository<User> {
-        private users = new Map<string, User>();
-
-        async findById(id: string): Promise<User | null> {
-          return this.users.get(id) ?? null;
-        }
-
-        async findAll(filter: Partial<User> = {}): Promise<User[]> {
-          return [...this.users.values()].filter((user) =>
-            Object.entries(filter).every(([key, value]) =>
-              user[key as keyof User] === value,
-            ),
-          );
-        }
-
-        async create(data: Omit<User, "id" | "createdAt">): Promise<User> {
-          const user: User = {
-            ...data,
-            id: crypto.randomUUID(),
-            createdAt: new Date(),
-          };
-          this.users.set(user.id, user);
-          return user;
-        }
-
-        async update(id: string, data: Partial<Omit<User, "id">>): Promise<User> {
-          const existing = this.users.get(id);
-          if (!existing) throw new Error(`User ${id} not found`);
-          const updated = { ...existing, ...data };
-          this.users.set(id, updated);
-          return updated;
-        }
-
-        async delete(id: string): Promise<boolean> {
-          return this.users.delete(id);
-        }
-      }
-
-      // --- Business logic is decoupled from data access ---
-      class UserService {
-        constructor(private readonly users: Repository<User>) {}
-
-        async promoteToAdmin(userId: string): Promise<User> {
-          const user = await this.users.findById(userId);
-          if (!user) {
-            throw new Error(`User ${userId} not found`);
-          }
-          return this.users.update(userId, { role: "admin" });
-        }
-      }
-
-  # =========================================================================
-  # Middleware Pattern
-  # =========================================================================
-
-  - name: Middleware Pattern
+  - name: Observer Pattern
     category: behavioral
     description: >
-      The Middleware pattern creates a chain of processing functions where each
-      middleware can inspect, modify, or short-circuit a request before passing
-      it to the next handler. It promotes separation of concerns by extracting
-      cross-cutting functionality (logging, auth, validation) into composable,
-      reusable units. TypeScript generics enable type-safe context threading.
-    whenToUse:
-      - "When you need cross-cutting concerns like logging, auth, or caching."
-      - "When processing steps should be composable and orderable."
-      - "When you want to implement request/response pipelines."
-      - "When building plugin systems or extensible processing chains."
-    relatedPatterns:
-      - "Result Type"
-      - "Repository Pattern"
-      - "Builder Pattern"
+      One-to-many dependency where subscribers are notified of state changes.
+      Enables loose coupling between producers and consumers of events.
+    when:
+      - "Decoupling event producers from consumers."
+      - "Implementing pub/sub or event systems."
     example: |
-      // --- Core middleware types ---
-      interface Context<TRequest = unknown, TResponse = unknown> {
-        request: TRequest;
-        response?: TResponse;
-        state: Record<string, unknown>;
-        abort: (reason: string) => void;
-        aborted: boolean;
+      type Listener<T> = (value: T) => void;
+      class EventEmitter<T = void> {
+        private listeners = new Set<Listener<T>>();
+        on(fn: Listener<T>): () => void { this.listeners.add(fn); return () => this.listeners.delete(fn); }
+        emit(value: T): void { this.listeners.forEach((fn) => fn(value)); }
       }
+    relatedPatterns:
+      - "Middleware Pattern"
+      - "Promise Chain"
 
-      type NextFunction = () => Promise<void>;
-
-      type Middleware<TRequest, TResponse> = (
-        ctx: Context<TRequest, TResponse>,
-        next: NextFunction,
-      ) => Promise<void>;
-
-      // --- Composable middleware pipeline ---
-      function compose<TRequest, TResponse>(
-        ...middlewares: Middleware<TRequest, TResponse>[]
-      ): Middleware<TRequest, TResponse> {
-        return async (ctx, next) => {
-          let index = 0;
-
-          async function dispatch(): Promise<void> {
-            if (ctx.aborted) return;
-            if (index >= middlewares.length) {
-              await next();
-              return;
-            }
-            const middleware = middlewares[index++];
-            await middleware(ctx, dispatch);
-          }
-
-          await dispatch();
-        };
+  - name: Factory Pattern
+    category: creational
+    description: >
+      Delegate object creation to a factory function, encapsulating
+      instantiation logic and enabling dependency injection.
+    when:
+      - "Object creation requires configuration or conditional logic."
+      - "Decoupling creation from usage for testability."
+    example: |
+      type StorageFactory = () => Storage;
+      function createStorage(type: "local" | "s3"): Storage {
+        return type === "local" ? new LocalStorage() : new S3Storage();
       }
+    relatedPatterns:
+      - "Singleton Pattern"
+      - "Module Pattern"
 
-      // --- Concrete middleware implementations ---
-
-      // Request logging
-      const loggingMiddleware: Middleware<Request, Response> = async (ctx, next) => {
-        const start = performance.now();
-        console.log(`--> ${ctx.request.method} ${ctx.request.url}`);
-
-        await next();
-
-        const duration = (performance.now() - start).toFixed(2);
-        console.log(`<-- ${ctx.request.method} ${ctx.request.url} (${duration}ms)`);
-      };
-
-      // Authentication
-      const authMiddleware: Middleware<Request, Response> = async (ctx, next) => {
-        const token = ctx.request.headers.get("Authorization")?.slice(7);
-
-        if (!token) {
-          ctx.abort("Missing authorization token");
-          return;
-        }
-
-        try {
-          const user = await verifyToken(token);
-          ctx.state.user = user;
-          await next();
-        } catch {
-          ctx.abort("Invalid or expired token");
-        }
-      };
-
-      // Rate limiting
-      const rateLimitMiddleware: Middleware<Request, Response> = (() => {
-        const requests = new Map<string, number[]>();
-
-        return async (ctx, next) => {
-          const ip = ctx.request.headers.get("X-Forwarded-For") ?? "unknown";
-          const now = Date.now();
-          const window = 60_000; // 1 minute
-          const maxRequests = 100;
-
-          const timestamps = (requests.get(ip) ?? []).filter(
-            (t) => now - t < window,
-          );
-
-          if (timestamps.length >= maxRequests) {
-            ctx.abort("Rate limit exceeded");
-            return;
-          }
-
-          timestamps.push(now);
-          requests.set(ip, timestamps);
-
-          await next();
-        };
-      })();
-
-      // Validation
-      function validateBody<T>(
-        schema: { parse: (data: unknown) => T },
-      ): Middleware<Request, Response> {
-        return async (ctx, next) => {
-          try {
-            const body = await ctx.request.json();
-            ctx.state.validatedBody = schema.parse(body);
-            await next();
-          } catch (error) {
-            ctx.abort(`Validation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-          }
-        };
+  - name: Promise Chain
+    category: behavioral
+    description: >
+      Sequence asynchronous operations using .then() chains or async/await.
+      Each step transforms the result and passes it to the next.
+    when:
+      - "Composing multiple async operations in sequence."
+      - "Transforming data through an async pipeline."
+    example: |
+      async function processOrder(order: Order): Promise<Invoice> {
+        const validated = await validateOrder(order);
+        const reserved = await reserveInventory(validated);
+        const charged = await processPayment(reserved);
+        return generateInvoice(charged);
       }
-
-      // --- Usage: building a pipeline ---
-      const pipeline = compose(
-        loggingMiddleware,
-        rateLimitMiddleware,
-        authMiddleware,
-        validateBody(userSchema),
-        async (ctx, next) => {
-          // Final handler runs after all middleware
-          const user = ctx.state.user;
-          const body = ctx.state.validatedBody;
-          // Process request...
-          await next();
-        },
-      );
+    relatedPatterns:
+      - "Observer Pattern"
+      - "Middleware Pattern"

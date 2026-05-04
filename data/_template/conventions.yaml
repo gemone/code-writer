@@ -1,79 +1,48 @@
 # Conventions Template
 # Copy this file to data/<language>/conventions.yaml and fill in the details
 
-version: 1
-language: "" # TODO: Language name (e.g., "typescript")
+version: "1"
 conventions:
-  - id: "" # TODO: Unique identifier (e.g., "naming-camelCase")
-    name: "" # TODO: Convention name (e.g., "Use camelCase for variables")
-    severity: "warn" # TODO: "error", "warn", or "info"
-    description: "" # TODO: Detailed description of the convention
-    category: "" # TODO: Category (e.g., "naming", "structure", "error-handling")
-    rule: "" # TODO: The actual rule to follow
-    examples:
-      bad:
-        - "" # TODO: Example of code violating the convention
-      good:
-        - "" # TODO: Example of code following the convention
-    autofix: false # TODO: Can this be automatically fixed?
-    references: [] # TODO: Links to documentation or style guides
+  - name: "{{CONVENTION_NAME}}"
+    severity: warn  # "error", "warn", or "info"
+    rule: "{{THE_RULE_TO_FOLLOW}}"
+    example:
+      good: "{{GOOD_EXAMPLE}}"
+      bad: "{{BAD_EXAMPLE}}"
+    rationale: "{{WHY_THIS_CONVENTION_EXISTS}}"
 
-  # Example convention:
-  - id: "naming-camelCase"
-    name: "Use camelCase for variables and functions"
-    severity: "warn"
-    description: "Variables and functions should use camelCase naming convention."
-    category: "naming"
-    rule: "Use camelCase for variable and function names"
-    examples:
-      bad:
-        - "const user_name = 'John';"
-        - "function get_user() { ... }"
-      good:
-        - "const userName = 'John';"
-        - "function getUser() { ... }"
-    autofix: false
-    references:
-      - "https://google.github.io/styleguide/tsguide.html#naming"
+  # Example:
+  - name: Use camelCase for variables and functions
+    severity: warn
+    rule: >
+      Variable and function names MUST use camelCase. Class names MUST use
+      PascalCase. Constants MUST use UPPER_SNAKE_CASE.
+    example:
+      good: |
+        const userName = "Alice";
+        function getUser() { return userName; }
+        const MAX_RETRIES = 3;
+      bad: |
+        const user_name = "Alice";
+        function get_user() { return user_name; }
+        const maxRetries = 3;
+    rationale: >
+      Consistent naming improves readability and follows the dominant community
+      style guide.
 
-  - id: "" # TODO: Another convention
-    name: "" # TODO: Convention name
-    severity: "warn" # TODO: Severity level
-    description: "" # TODO: Description
-    category: "" # TODO: Category
-    rule: "" # TODO: Rule
-    examples:
-      bad:
-        - "" # TODO: Bad example
-      good:
-        - "" # TODO: Good example
-    autofix: false
-    references: []
-
-namingConventions:
-  # TODO: Define language-specific naming conventions
-  variables:
-    rule: "camelCase"
-    examples: ["userName", "totalCount", "isActive"]
-
-  functions:
-    rule: "camelCase with verb phrases"
-    examples: ["getUser", "calculateTotal", "isValid"]
-
-  classes:
-    rule: "PascalCase"
-    examples: ["UserService", "HttpClient", "DatabaseConnection"]
-
-  constants:
-    rule: "UPPER_SNAKE_CASE"
-    examples: ["MAX_RETRY_COUNT", "API_BASE_URL", "DEFAULT_TIMEOUT"]
-
-  interfaces:
-    rule: "PascalCase"
-    examples: ["User", "ApiResponse", "Config"]
-
-  enums:
-    rule: "PascalCase for type, UPPER_SNAKE_CASE for values"
-    examples:
-      type: "UserRole"
-      values: ["ADMIN", "USER", "GUEST"]
+  - name: Prefer const over let
+    severity: warn
+    rule: >
+      Use const for all bindings that are not reassigned. Use let only when
+      reassignment is necessary. Never use var.
+    example:
+      good: |
+        const name = "Alice";
+        let count = 0;
+        count += 1;
+      bad: |
+        var name = "Alice";
+        let name = "Alice";
+    rationale: >
+      const signals intent and prevents accidental reassignment, making code
+      easier to reason about.

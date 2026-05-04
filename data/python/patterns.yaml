@@ -1,491 +1,194 @@
 # Python Design Patterns
-# Common patterns with idiomatic Python implementations
+# Minimal seed - comprehensive data auto-fetched via lang_fetch
 
 patterns:
-  # =========================================================================
-  # Context Manager Pattern
-  # =========================================================================
   - name: Context Manager Pattern
     category: behavioral
     description: >
-      The Context Manager pattern manages resource lifecycle by ensuring
-      proper acquisition and release. Python's 'with' statement and
-      contextlib module provide first-class support for this pattern.
-      It replaces try/finally blocks with cleaner, more composable code.
+      Manages resource lifecycle ensuring proper acquisition and release.
+      Python's with statement and contextlib provide first-class support.
     whenToUse:
-      - Managing resources that require cleanup (files, connections, locks)
-      - Ensuring setup and teardown code always runs
-      - Temporarily modifying global state or configuration
-      - Measuring execution time or collecting metrics
+      - Managing resources requiring cleanup (files, connections, locks)
+      - Ensuring setup/teardown code always runs
       - Transaction management (commit/rollback)
-      - Thread-safe or async-safe resource access
     example: |
       from contextlib import contextmanager
-      from types import TracebackType
-      from typing import Self, Generator
-      import threading
 
-      class DatabaseTransaction:
-          """Manages a database transaction with automatic commit/rollback.
-
-          Usage:
-              with DatabaseTransaction(connection) as tx:
-                  tx.execute("INSERT INTO users ...")
-                  tx.execute("UPDATE accounts ...")
-                  # Commits on successful exit, rolls back on exception
-          """
-
-          def __init__(self, connection: "Connection") -> None:
-              self._conn = connection
-              self._transaction = None
-
-          def __enter__(self) -> Self:
-              self._transaction = self._conn.begin()
-              return self
-
-          def __exit__(
-              self,
-              exc_type: type[BaseException] | None,
-              exc_val: BaseException | None,
-              exc_tb: TracebackType | None,
-          ) -> bool:
-              if exc_type is not None:
-                  self._transaction.rollback()
-              else:
-                  self._transaction.commit()
-              return False  # Never suppress exceptions
-
-          def execute(self, sql: str, params: dict | None = None) -> "Cursor":
-              return self._conn.execute(sql, params or {})
-
-      # Simpler context managers via contextlib
       @contextmanager
-      def acquire_lock(lock: threading.Lock, timeout: float = 10.0) -> Generator[None, None, None]:
-          """Acquire a lock with a timeout, releasing it on exit."""
+      def acquire_lock(lock, timeout: float = 10.0):
           acquired = lock.acquire(timeout=timeout)
           if not acquired:
-              raise TimeoutError(f"Could not acquire lock within {timeout}s")
+              raise TimeoutError(f"Lock not acquired within {timeout}s")
           try:
               yield
           finally:
               lock.release()
 
-      # Temporary state change
-      @contextmanager
-      def change_directory(path: str) -> Generator[None, None, None]:
-          """Temporarily change the working directory."""
-          import os
-          previous = os.getcwd()
-          os.chdir(path)
-          try:
-              yield
-          finally:
-              os.chdir(previous)
-
-      # Usage
-      lock = threading.Lock()
-      with acquire_lock(lock):
-          # Critical section - lock is held
-          modify_shared_state()
-      # Lock is released even if an exception occurs
+      class DatabaseTransaction:
+          def __init__(self, connection) -> None:
+              self._conn = connection
+          def __enter__(self):
+              self._tx = self._conn.begin()
+              return self
+          def __exit__(self, exc_type, exc_val, exc_tb):
+              if exc_type is not None:
+                  self._tx.rollback()
+              else:
+                  self._tx.commit()
+              return False
     relatedPatterns:
       - Decorator Pattern
-      - Resource Acquisition Is Initialization (RAII)
+      - RAII
 
-  # =========================================================================
-  # Decorator Pattern
-  # =========================================================================
   - name: Decorator Pattern
     category: behavioral
     description: >
-      The Decorator pattern extends or modifies function or class behavior
-      without modifying the original code. Python's @decorator syntax
-      provides elegant first-class support. Decorators are higher-order
-      functions that wrap the target with additional functionality.
+      Extends or modifies function/class behavior without changing the original.
+      Python's @decorator syntax provides elegant first-class support.
     whenToUse:
-      - Adding cross-cutting concerns (logging, timing, caching)
-      - Authorization and authentication checks
-      - Input validation and sanitization
-      - Retry logic and rate limiting
-      - Memoization and caching
-      - Registering functions (plugins, routes, signal handlers)
-      - Modifying return values or arguments
+      - Cross-cutting concerns (logging, timing, caching)
+      - Input validation and retry logic
+      - Registering functions (plugins, routes)
     example: |
       import functools
-      import time
-      import logging
-      from typing import TypeVar, ParamSpec, Callable, Any
-      from collections import defaultdict
-
-      logger = logging.getLogger(__name__)
-
-      P = ParamSpec("P")
-      T = TypeVar("T")
+      from typing import Callable, TypeVar, ParamSpec
+      P = ParamSpec("P"); T = TypeVar("T")
 
       def timer(func: Callable[P, T]) -> Callable[P, T]:
-          """Log the execution time of a function."""
           @functools.wraps(func)
           def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+              import time
               start = time.perf_counter()
               try:
                   return func(*args, **kwargs)
               finally:
-                  elapsed = time.perf_counter() - start
-                  logger.info(f"{func.__name__} took {elapsed:.4f}s")
+                  print(f"{func.__name__}: {time.perf_counter() - start:.4f}s")
           return wrapper
 
-      def retry(
-          max_attempts: int = 3,
-          delay: float = 1.0,
-          exceptions: tuple[type[Exception], ...] = (Exception,),
-      ) -> Callable[[Callable[P, T]], Callable[P, T]]:
-          """Retry a function on specified exceptions with exponential backoff."""
+      def retry(max_attempts: int = 3):
           def decorator(func: Callable[P, T]) -> Callable[P, T]:
               @functools.wraps(func)
               def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-                  last_exception: Exception | None = None
                   for attempt in range(max_attempts):
                       try:
                           return func(*args, **kwargs)
-                      except exceptions as e:
-                          last_exception = e
-                          if attempt < max_attempts - 1:
-                              wait = delay * (2 ** attempt)
-                              logger.warning(
-                                  f"{func.__name__} attempt {attempt + 1} failed: {e}. "
-                                  f"Retrying in {wait:.1f}s..."
-                              )
-                              time.sleep(wait)
-                  raise last_exception  # type: ignore[misc]
+                      except Exception:
+                          if attempt == max_attempts - 1:
+                              raise
               return wrapper
           return decorator
 
-      def memoize(func: Callable[P, T]) -> Callable[P, T]:
-          """Cache function results based on arguments."""
-          cache: dict[tuple, T] = {}
-
-          @functools.wraps(func)
-          def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-              key = (args, tuple(sorted(kwargs.items())))
-              if key not in cache:
-                  cache[key] = func(*args, **kwargs)
-              return cache[key]
-
-          wrapper.cache_clear = cache.clear  # type: ignore[attr-defined]
-          return wrapper
-
-      # Stacking decorators
       @timer
-      @retry(max_attempts=3, exceptions=(ConnectionError, TimeoutError))
-      @memoize
-      def fetch_user_data(user_id: int) -> dict:
-          """Fetch user data with retry and caching."""
-          ...
-
-      # Class-based decorator for route registration
-      class Router:
-          def __init__(self) -> None:
-              self._routes: dict[str, Callable] = {}
-
-          def route(self, path: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
-              def decorator(func: Callable[P, T]) -> Callable[P, T]:
-                  self._routes[path] = func
-                  return func
-              return decorator
-
-          def handle(self, path: str, **kwargs: Any) -> Any:
-              handler = self._routes.get(path)
-              if handler is None:
-                  raise KeyError(f"No handler for {path}")
-              return handler(**kwargs)
-
-      router = Router()
-
-      @router.route("/users")
-      def list_users() -> list[dict]:
-          return []
-
-      @router.route("/health")
-      def health_check() -> dict:
-          return {"status": "ok"}
+      @retry(max_attempts=3)
+      def fetch_data(url: str) -> dict: ...
     relatedPatterns:
       - Context Manager Pattern
       - Proxy Pattern
-      - Strategy Pattern
 
-  # =========================================================================
-  # Dataclass Pattern
-  # =========================================================================
   - name: Dataclass Pattern
     category: structural
     description: >
-      The Dataclass pattern uses Python's @dataclass decorator to create
-      clean, immutable or mutable data containers with automatic method
-      generation. It replaces boilerplate __init__, __repr__, __eq__, and
-      provides a declarative way to define data structures.
+      Uses @dataclass to create data containers with automatic __init__,
+      __repr__, __eq__. Replaces boilerplate for data-holding classes.
     whenToUse:
-      - Defining data transfer objects (DTOs) and value objects
+      - Defining data transfer objects and value objects
       - Configuration objects with defaults and validation
       - API request/response models
-      - Domain entities with clear field definitions
-      - Replacing named tuples with richer functionality
-      - Settings and options with type safety
     example: |
       from dataclasses import dataclass, field, asdict
-      from datetime import datetime
-      from typing import Self
-      import json
 
-      # Basic dataclass with defaults
       @dataclass
-      class UserProfile:
-          """User profile with validation and serialization."""
+      class User:
           name: str
           email: str
           age: int
           is_active: bool = True
-          roles: list[str] = field(default_factory=list)
-          created_at: datetime = field(default_factory=datetime.now, repr=False)
+          tags: list[str] = field(default_factory=list)
 
           def __post_init__(self) -> None:
-              """Validate fields after initialization."""
-              if self.age < 0:
-                  raise ValueError(f"Age must be non-negative, got {self.age}")
               if "@" not in self.email:
                   raise ValueError(f"Invalid email: {self.email}")
 
-          def to_json(self) -> str:
-              """Serialize to JSON string."""
-              data = asdict(self)
-              data["created_at"] = self.created_at.isoformat()
-              return json.dumps(data, indent=2)
-
-          @classmethod
-          def from_dict(cls, data: dict) -> Self:
-              """Create from a dictionary."""
-              data["created_at"] = datetime.fromisoformat(data["created_at"])
-              return cls(**data)
-
-      # Immutable dataclass (frozen + slots for performance)
       @dataclass(frozen=True, slots=True)
       class Point:
-          x: float
-          y: float
+          x: float; y: float
 
           def distance_to(self, other: "Point") -> float:
               return ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
 
-          def __add__(self, other: "Point") -> "Point":
-              return Point(self.x + other.x, self.y + other.y)
-
-      # Dataclass with computed fields and validation
-      @dataclass
-      class Order:
-          order_id: str
-          items: list["OrderItem"]
-          discount_percent: float = 0.0
-
-          @property
-          def subtotal(self) -> float:
-              return sum(item.quantity * item.unit_price for item in self.items)
-
-          @property
-          def total(self) -> float:
-              return self.subtotal * (1 - self.discount_percent / 100)
-
-      @dataclass
-      class OrderItem:
-          product_id: str
-          name: str
-          quantity: int
-          unit_price: float
-
-          def __post_init__(self) -> None:
-              if self.quantity <= 0:
-                  raise ValueError("Quantity must be positive")
-              if self.unit_price < 0:
-                  raise ValueError("Price cannot be negative")
-
-      # Hierarchical dataclass with factory
-      @dataclass
-      class AppConfig:
-          database_url: str
-          debug: bool = False
-          log_level: str = "INFO"
-          max_connections: int = 10
-
-          @classmethod
-          def from_env(cls) -> Self:
-              """Create config from environment variables."""
-              import os
-              return cls(
-                  database_url=os.environ["DATABASE_URL"],
-                  debug=os.environ.get("DEBUG", "false").lower() == "true",
-                  log_level=os.environ.get("LOG_LEVEL", "INFO"),
-                  max_connections=int(os.environ.get("MAX_CONNECTIONS", "10")),
-              )
-
-      # Usage
-      profile = UserProfile(name="Alice", email="alice@example.com", age=30)
-      p1 = Point(1.0, 2.0)
-      p2 = Point(4.0, 6.0)
-      distance = p1.distance_to(p2)  # 5.0
+      user = User("Alice", "alice@test.com", 30)
+      data = asdict(user)  # {"name": "Alice", ...}
     relatedPatterns:
       - Value Object Pattern
       - Builder Pattern
-      - Transfer Object Pattern
 
-  # =========================================================================
-  # Generator Pattern
-  # =========================================================================
-  - name: Generator Pattern
+  - name: Factory Pattern
+    category: creational
+    description: >
+      Creates objects without exposing instantiation logic. Classmethod
+      factories and registry-based factories are common Python idioms.
+    whenToUse:
+      - Creating objects from configuration or environment
+      - Decoupling client code from concrete classes
+    example: |
+      from abc import ABC, abstractmethod
+
+      class Formatter(ABC):
+          @abstractmethod
+          def format(self, data: dict) -> str: ...
+
+      class JsonFormatter(Formatter):
+          def format(self, data: dict) -> str:
+              import json; return json.dumps(data, indent=2)
+
+      _registry: dict[str, type[Formatter]] = {}
+
+      def register(name: str):
+          def decorator(cls):
+              _registry[name] = cls; return cls
+          return decorator
+
+      register("json")(JsonFormatter)
+
+      def create_formatter(name: str) -> Formatter:
+          if name not in _registry:
+              raise ValueError(f"Unknown format: {name}")
+          return _registry[name]()
+    relatedPatterns:
+      - Abstract Factory Pattern
+      - Registry Pattern
+
+  - name: Iterator / Generator Pattern
     category: behavioral
     description: >
-      The Generator pattern uses Python's generator functions (yield) and
-      generator expressions to create lazy, memory-efficient iterators.
-      Generators produce items on demand, making them ideal for processing
-      large datasets, streams, and pipelines without loading everything
-      into memory.
+      Uses generator functions (yield) for lazy, memory-efficient iteration
+      over large datasets and streams.
     whenToUse:
       - Processing large files or datasets line by line
       - Building data processing pipelines
-      - Implementing infinite sequences (Fibonacci, counters)
-      - Paginating through API results
-      - Backpressure handling in data streams
-      - Replacing callback-based APIs with pull-based iteration
+      - Implementing infinite sequences
     example: |
-      from typing import Generator, TypeVar, Callable, Iterable
-      from pathlib import Path
-      import csv
+      from typing import Generator, Callable, Iterable
 
-      T = TypeVar("T")
-      U = TypeVar("U")
+      def read_lines(filepath: str) -> Generator[str, None, None]:
+          with open(filepath) as f:
+              yield from f
 
-      # Basic generator for paginated API
-      def fetch_all_users(
-          api_client: "ApiClient",
-          page_size: int = 100,
-      ) -> Generator[dict, None, None]:
-          """Yield users from paginated API until exhausted.
+      def filter_lines(lines: Iterable[str], pred: Callable[[str], bool]) -> Generator[str, None, None]:
+          for line in lines:
+              if pred(line): yield line
 
-          Lazily fetches pages of users, yielding one user at a time.
-          Memory usage is bounded by page_size regardless of total users.
-          """
-          page = 0
-          while True:
-              response = api_client.get(f"/users?page={page}&size={page_size}")
-              users = response["data"]
-
-              if not users:
-                  break
-
-              yield from users
-
-              if response.get("is_last_page", False):
-                  break
-              page += 1
-
-      # Generator pipeline for data processing
-      def read_csv_rows(filepath: Path) -> Generator[dict[str, str], None, None]:
-          """Yield CSV rows as dictionaries, one at a time."""
-          with filepath.open() as f:
-              reader = csv.DictReader(f)
-              yield from reader
-
-      def filter_rows(
-          rows: Iterable[dict[str, str]],
-          predicate: Callable[[dict[str, str]], bool],
-      ) -> Generator[dict[str, str], None, None]:
-          """Yield rows that match the predicate."""
-          for row in rows:
-              if predicate(row):
-                  yield row
-
-      def transform_rows(
-          rows: Iterable[dict[str, str]],
-          transform: Callable[[dict[str, str]], T],
-      ) -> Generator[T, None, None]:
-          """Apply a transformation to each row."""
-          for row in rows:
-              yield transform(row)
-
-      def batched(
-          iterable: Iterable[T],
-          size: int,
-      ) -> Generator[list[T], None, None]:
-          """Yield successive batches from iterable.
-
-          Note: itertools.batched() available in Python 3.12+
-          """
-          batch: list[T] = []
+      def batched(iterable: Iterable, size: int) -> Generator[list, None, None]:
+          batch = []
           for item in iterable:
               batch.append(item)
               if len(batch) == size:
-                  yield batch
-                  batch = []
-          if batch:
-              yield batch
+                  yield batch; batch = []
+          if batch: yield batch
 
-      # Composing the pipeline
-      def process_sales_data(filepath: Path) -> dict[str, float]:
-          """Process sales CSV efficiently with generator pipeline.
-
-          Memory usage stays constant regardless of file size because
-          each row is processed and discarded immediately.
-          """
-          rows = read_csv_rows(filepath)
-
-          # Filter to completed sales only
-          completed = filter_rows(rows, lambda r: r["status"] == "completed")
-
-          # Extract and convert amounts
-          amounts = transform_rows(completed, lambda r: float(r["amount"]))
-
-          # Process in batches for database insertion
-          total = 0.0
-          count = 0
-          for batch in batched(amounts, size=1000):
-              total += sum(batch)
-              count += len(batch)
-
-          return {"total": total, "count": count}
-
-      # Infinite generator
-      def fibonacci() -> Generator[int, None, None]:
-          """Yield Fibonacci numbers indefinitely."""
-          a, b = 0, 1
-          while True:
-              yield a
-              a, b = b, a + b
-
-      # Generator-based sliding window
-      def sliding_window(
-          iterable: Iterable[T],
-          size: int,
-      ) -> Generator[tuple[T, ...], None, None]:
-          """Yield a sliding window of the given size."""
-          from collections import deque
-          window: deque[T] = deque(maxlen=size)
-          for item in iterable:
-              window.append(item)
-              if len(window) == size:
-                  yield tuple(window)
-
-      # Usage
-      from itertools import islice
-
-      # Get first 10 Fibonacci numbers (lazily)
-      first_10 = list(islice(fibonacci(), 10))
-      # [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
-
-      # Process a multi-gigabyte file with constant memory
-      results = process_sales_data(Path("huge_sales.csv"))
-
-      # Sliding window average
-      data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-      windows = list(sliding_window(data, 3))
-      # [(1,2,3), (2,3,4), (3,4,5), ..., (8,9,10)]
+      # Pipeline: read -> filter -> batch
+      for batch in batched(filter_lines(read_lines("huge.csv"), lambda l: "active" in l), 1000):
+          process_batch(batch)
     relatedPatterns:
-      - Iterator Pattern
       - Pipeline Pattern
       - Observer Pattern

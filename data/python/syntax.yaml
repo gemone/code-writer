@@ -1,614 +1,141 @@
 # Python Syntax Guide
-# Comprehensive reference for Python 3.13 syntax and language constructs
+# Minimal seed - comprehensive data auto-fetched via lang_fetch
 
 sections:
-  # =========================================================================
-  # Variables and Types
-  # =========================================================================
   - title: Variables and Types
     description: >
-      Python uses dynamic typing with optional type annotations. Variables are
-      created on assignment and can reference any object. Type hints (PEP 484)
-      provide documentation and enable static analysis without runtime enforcement.
-
+      Python uses dynamic typing with optional type annotations (PEP 484).
+      Type hints enable static analysis without runtime enforcement.
     topics:
-      - topic: Type Hints and Annotations
-        description: >
-          Type hints describe the expected types of variables, parameters, and
-          return values. They are not enforced at runtime but enable tooling
-          support via mypy, pyright, and IDE integrations.
+      - title: Type Annotations
+        description: "Type hints for variables, parameters, and return values."
         examples:
-          - title: Basic Type Annotations
+          - description: "Basic annotations"
             code: |
-              # Variable annotations
               name: str = "Alice"
-              age: int = 30
-              is_active: bool = True
               scores: list[int] = [95, 87, 92]
               config: dict[str, str] = {"host": "localhost"}
-
-              # Without default value (just annotation, no assignment)
-              counter: int
-
-              # Multi-variable annotation
-              x: int
-              y: int
-              x, y = 10, 20
-
-      - topic: Optional and Union Types
-        description: >
-          Optional[X] is shorthand for Union[X, None]. Union[X, Y] indicates
-          a value can be of type X or type Y. In Python 3.10+, use the | syntax.
+      - title: Optional and Union Types
+        description: "Optional[X] is Union[X, None]. Use | syntax on 3.10+."
         examples:
-          - title: Optional and Union
+          - description: "Optional and Union"
             code: |
-              from typing import Optional, Union
-
-              # Old syntax
-              def find_user(user_id: int) -> Optional[str]:
-                  """Return username or None if not found."""
-                  if user_id == 1:
-                      return "Alice"
-                  return None
-
-              def process(value: Union[int, str]) -> str:
-                  return str(value)
-
-              # Python 3.10+ syntax (preferred)
               def find_user(user_id: int) -> str | None:
-                  if user_id == 1:
-                      return "Alice"
-                  return None
+                  return "Alice" if user_id == 1 else None
 
               def process(value: int | str) -> str:
                   return str(value)
-
-      - topic: TypeVar and Generics
-        description: >
-          TypeVar defines type variables for generic functions and classes.
-          Allows writing code that works with multiple types while preserving
-          type information.
+      - title: TypeVar and Generics
+        description: "TypeVar for generic functions and classes."
         examples:
-          - title: TypeVar Basics
+          - description: "Generic function"
             code: |
               from typing import TypeVar
-
               T = TypeVar("T")
-              Number = TypeVar("Number", int, float)
 
               def first(items: list[T]) -> T:
-                  """Return the first item, preserving its type."""
                   return items[0]
 
-              result = first([1, 2, 3])     # type is int
-              result = first(["a", "b"])    # type is str
-
-              def add(a: Number, b: Number) -> Number:
-                  return a + b
-
-          - title: Generic Classes
-            code: |
-              from typing import TypeVar, Generic
-
-              T = TypeVar("T")
-
-              class Stack(Generic[T]):
-                  def __init__(self) -> None:
-                      self._items: list[T] = []
-
-                  def push(self, item: T) -> None:
-                      self._items.append(item)
-
-                  def pop(self) -> T:
-                      if not self._items:
-                          raise IndexError("Stack is empty")
-                      return self._items.pop()
-
-                  def __len__(self) -> int:
-                      return len(self._items)
-
-              int_stack: Stack[int] = Stack()
-              int_stack.push(42)
-
-          - title: Python 3.12+ Type Parameter Syntax
-            code: |
-              # Python 3.12+ (PEP 695)
+              # Python 3.12+ shorthand
               def first[T](items: list[T]) -> T:
                   return items[0]
 
-              class Stack[T]:
-                  def __init__(self) -> None:
-                      self._items: list[T] = []
-
-                  def push(self, item: T) -> None:
-                      self._items.append(item)
-
-                  def pop(self) -> T:
-                      return self._items.pop()
-
-      - topic: Type Aliases
-        description: >
-          Type aliases create shorthand names for complex types. Use TypeAlias
-          (3.10+) or the type statement (3.12+) for explicit aliases.
-        examples:
-          - title: Type Alias Syntax
-            code: |
-              from typing import TypeAlias
-
-              # Python 3.10+ with TypeAlias
-              UserID: TypeAlias = int
-              UserName: TypeAlias = str
-              UserMap: TypeAlias = dict[UserID, UserName]
-              Vector: TypeAlias = list[float]
-              Callback: TypeAlias = Callable[[str, int], bool]
-
-              # Python 3.12+ type statement
-              type UserID = int
-              type UserMap = dict[int, str]
-              type Point = tuple[float, float]
-
-              # Using aliases
-              def get_user(uid: UserID) -> UserName:
-                  return "Alice"
-
-  # =========================================================================
-  # Functions
-  # =========================================================================
   - title: Functions
     description: >
-      Functions are first-class objects in Python. They can be assigned to
-      variables, passed as arguments, and returned from other functions.
-
+      Functions are first-class objects with type hints, decorators,
+      and flexible parameter styles (positional-only, keyword-only).
     topics:
-      - topic: Function Definitions
-        description: >
-          Functions are defined with the 'def' keyword. They support type hints
-          for parameters and return values, default parameter values, and
-          docstrings.
+      - title: Function Definitions
+        description: "Functions with def, type hints, and default values."
         examples:
-          - title: Standard Function Definition
+          - description: "Standard function"
             code: |
               def greet(name: str, greeting: str = "Hello") -> str:
-                  """Return a greeting message for the given name.
-
-                  Args:
-                      name: The person's name.
-                      greeting: The greeting word (default: "Hello").
-
-                  Returns:
-                      A formatted greeting string.
-                  """
                   return f"{greeting}, {name}!"
 
-              # Calling with positional and keyword arguments
               greet("Alice")                    # "Hello, Alice!"
               greet("Bob", greeting="Hi")       # "Hi, Bob!"
-              greet(name="Charlie", greeting="Hey")  # "Hey, Charlie!"
-
-      - topic: Lambda Expressions
-        description: >
-          Lambda creates small anonymous functions. They are limited to a single
-          expression and are best used for short callbacks and key functions.
+      - title: Parameter Styles
+        description: "Positional-only (/), keyword-only (*), mutable default pitfall."
         examples:
-          - title: Lambda Usage
+          - description: "Parameter kinds and mutable default"
             code: |
-              # Basic lambda
-              square = lambda x: x ** 2
-              add = lambda x, y: x + y
-
-              # As a sort key
-              students = [("Alice", 90), ("Bob", 85), ("Charlie", 92)]
-              students.sort(key=lambda s: s[1], reverse=True)
-
-              # With map and filter
-              numbers = [1, 2, 3, 4, 5]
-              squared = list(map(lambda x: x ** 2, numbers))
-              evens = list(filter(lambda x: x % 2 == 0, numbers))
-
-              # In a dictionary of operations
-              operations = {
-                  "add": lambda x, y: x + y,
-                  "sub": lambda x, y: x - y,
-                  "mul": lambda x, y: x * y,
-              }
-              result = operations["add"](3, 4)  # 7
-
-      - topic: Decorators
-        description: >
-          Decorators are functions that modify the behavior of other functions.
-          They are applied using the @decorator syntax before a function definition.
-        examples:
-          - title: Writing and Using Decorators
-            code: |
-              import functools
-              import time
-              from typing import Callable, TypeVar, ParamSpec
-
-              P = ParamSpec("P")
-              T = TypeVar("T")
-
-              def timer(func: Callable[P, T]) -> Callable[P, T]:
-                  """Decorator that logs function execution time."""
-                  @functools.wraps(func)
-                  def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-                      start = time.perf_counter()
-                      result = func(*args, **kwargs)
-                      elapsed = time.perf_counter() - start
-                      print(f"{func.__name__} took {elapsed:.4f}s")
-                      return result
-                  return wrapper
-
-              def retry(max_attempts: int = 3) -> Callable:
-                  """Decorator that retries a function on failure."""
-                  def decorator(func: Callable[P, T]) -> Callable[P, T]:
-                      @functools.wraps(func)
-                      def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-                          for attempt in range(max_attempts):
-                              try:
-                                  return func(*args, **kwargs)
-                              except Exception:
-                                  if attempt == max_attempts - 1:
-                                      raise
-                      return wrapper
-                  return decorator
-
-              @timer
-              @retry(max_attempts=3)
-              def fetch_data(url: str) -> dict:
-                  """Fetch data from a URL with retry logic."""
-                  ...
-
-      - topic: "*args and **kwargs"
-        description: >
-          *args collects extra positional arguments as a tuple. **kwargs collects
-          extra keyword arguments as a dict. They enable flexible function signatures.
-        examples:
-          - title: Using *args and **kwargs
-            code: |
-              def debug_print(*args: object, **kwargs: object) -> None:
-                  """Print with debug info, accepting any arguments."""
-                  print(f"Args: {args}")
-                  print(f"Kwargs: {kwargs}")
-
-              debug_print("hello", 42, key="value")
-              # Args: ('hello', 42)
-              # Kwargs: {'key': 'value'}
-
-              # Forwarding arguments
-              def wrapper(*args: object, **kwargs: object) -> None:
-                  some_function(*args, **kwargs)
-
-              # Combining with typed parameters
-              def log(level: str, *messages: str, prefix: str = "LOG") -> None:
-                  for msg in messages:
-                      print(f"[{prefix}] [{level}] {msg}")
-
-              log("INFO", "started", "ready", prefix="APP")
-              # [APP] [INFO] started
-              # [APP] [INFO] ready
-
-      - topic: Default Parameters and Parameter Types
-        description: >
-          Functions support positional-only (/), keyword-only (*), and mixed
-          parameter styles. Default values are evaluated once at definition time.
-        examples:
-          - title: Parameter Styles
-            code: |
-              # Positional-only (before /)
               def create_user(name: str, age: int, /) -> dict:
                   return {"name": name, "age": age}
 
-              # Keyword-only (after *)
-              def configure(*, host: str, port: int, debug: bool = False) -> None:
-                  ...
+              def configure(*, host: str, port: int = 5432) -> None: ...
 
-              # Mixed
-              def send(message: str, /, *, channel: str, priority: int = 1) -> None:
-                  ...
-
-              send("hello", channel="general")          # OK
-              send(message="hello", channel="general")  # Error: positional-only
-
-          - title: Mutable Default Pitfall
-            code: |
-              # WRONG: mutable default is shared across calls
-              def append_item(item: int, items: list[int] = []) -> list[int]:
-                  items.append(item)
-                  return items
-
-              # CORRECT: use None and create in body
+              # CORRECT: use None for mutable defaults
               def append_item(item: int, items: list[int] | None = None) -> list[int]:
                   if items is None:
                       items = []
                   items.append(item)
                   return items
-
-  # =========================================================================
-  # Control Flow
-  # =========================================================================
-  - title: Control Flow
-    description: >
-      Python provides conditional statements, loops, comprehensions, and pattern
-      matching for controlling program execution flow.
-
-    topics:
-      - topic: Conditional Statements (if/elif/else)
-        description: >
-          Conditional execution uses if, elif, and else. Python uses truthiness
-          testing: empty collections, zero, None, and False are falsy.
+      - title: Decorators
+        description: "Functions modifying other functions via @syntax."
         examples:
-          - title: Conditionals
+          - description: "Timer decorator with functools.wraps"
             code: |
-              score = 85
+              import functools, time
+              from typing import Callable, TypeVar, ParamSpec
+              P = ParamSpec("P"); T = TypeVar("T")
 
-              if score >= 90:
-                  grade = "A"
-              elif score >= 80:
-                  grade = "B"
-              elif score >= 70:
-                  grade = "C"
-              else:
-                  grade = "F"
+              def timer(func: Callable[P, T]) -> Callable[P, T]:
+                  @functools.wraps(func)
+                  def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+                      start = time.perf_counter()
+                      result = func(*args, **kwargs)
+                      print(f"{func.__name__}: {time.perf_counter() - start:.4f}s")
+                      return result
+                  return wrapper
 
-              # Truthiness checks
-              items: list[int] = []
-              if items:  # False because list is empty
-                  print("Has items")
-              else:
-                  print("Empty")
+              @timer
+              def fetch_data(url: str) -> dict: ...
 
-              # Ternary expression
-              status = "active" if is_active else "inactive"
-
-              # Chained comparisons
-              if 0 <= score <= 100:
-                  print("Valid score")
-
-              # Walrus operator (3.8+)
-              if (n := len(data)) > 10:
-                  print(f"Data has {n} items")
-
-      - topic: Match/Case (Python 3.10+)
-        description: >
-          Structural pattern matching (PEP 634) enables matching values against
-          patterns with destructuring and guards.
-        examples:
-          - title: Pattern Matching
-            code: |
-              def handle_command(command: str) -> str:
-                  match command.split():
-                      case ["quit"]:
-                          return "Goodbye!"
-                      case ["greet", name]:
-                          return f"Hello, {name}!"
-                      case ["greet", name, *rest]:
-                          return f"Hello, {name}! Extra: {rest}"
-                      case ["add", x, y] if x.isdigit() and y.isdigit():
-                          return f"Sum: {int(x) + int(y)}"
-                      case _:
-                          return f"Unknown command: {command}"
-
-          - title: Matching Data Structures
-            code: |
-              def process_event(event: dict) -> str:
-                  match event:
-                      case {"type": "click", "x": int(x), "y": int(y)}:
-                          return f"Click at ({x}, {y})"
-                      case {"type": "keypress", "key": str(key)}:
-                          return f"Key pressed: {key}"
-                      case {"type": "scroll", "delta": int(d)} if d > 0:
-                          return "Scroll up"
-                      case {"type": "scroll", "delta": int(d)} if d < 0:
-                          return "Scroll down"
-                      case _:
-                          return "Unknown event"
-
-      - topic: For and While Loops
-        description: >
-          'for' iterates over sequences and iterables. 'while' repeats while a
-          condition is true. Both support break, else, and continue.
-        examples:
-          - title: Loop Constructs
-            code: |
-              # For loop with enumerate
-              fruits = ["apple", "banana", "cherry"]
-              for i, fruit in enumerate(fruits, start=1):
-                  print(f"{i}. {fruit}")
-
-              # For loop with zip
-              names = ["Alice", "Bob"]
-              ages = [30, 25]
-              for name, age in zip(names, ages):
-                  print(f"{name} is {age}")
-
-              # While with else
-              n = 0
-              while n < 5:
-                  n += 1
-                  if n == 3:
-                      continue  # Skip 3
-                  print(n)
-              else:
-                  print("Loop completed normally")
-
-              # For-else (runs if no break)
-              for item in items:
-                  if item == target:
-                      print("Found!")
-                      break
-              else:
-                  print("Not found")
-
-      - topic: List Comprehensions
-        description: >
-          Comprehensions provide concise syntax for creating lists, sets, and
-          dicts from existing iterables with optional filtering.
-        examples:
-          - title: Comprehension Syntax
-            code: |
-              # List comprehension
-              squares = [x ** 2 for x in range(10)]
-              # [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
-
-              # With filter
-              evens = [x for x in range(20) if x % 2 == 0]
-
-              # Nested comprehension
-              matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
-              flat = [n for row in matrix for n in row]
-              # [1, 2, 3, 4, 5, 6, 7, 8, 9]
-
-              # Dict comprehension
-              word_lengths = {w: len(w) for w in ["hello", "world"]}
-              # {"hello": 5, "world": 5}
-
-              # Set comprehension
-              unique_lengths = {len(w) for w in ["hello", "world", "hi"]}
-              # {2, 5}
-
-      - topic: Generator Expressions
-        description: >
-          Generator expressions are like list comprehensions but produce items
-          lazily. They are memory-efficient for large datasets.
-        examples:
-          - title: Generator Expressions
-            code: |
-              # Generator expression (lazy evaluation)
-              gen = (x ** 2 for x in range(1_000_000))
-
-              # Consume lazily
-              total = sum(x ** 2 for x in range(1_000_000))
-
-              # In function arguments
-              max_val = max(x ** 2 for x in numbers if x > 0)
-
-              # Generator function
-              def fibonacci() -> Generator[int, None, None]:
-                  a, b = 0, 1
-                  while True:
-                      yield a
-                      a, b = b, a + b
-
-  # =========================================================================
-  # Classes
-  # =========================================================================
   - title: Classes
     description: >
-      Python supports object-oriented programming with classes, inheritance,
-      and special methods. Classes are defined with the 'class' keyword.
-
+      Python supports OOP with classes, inheritance, dataclasses, properties,
+      and special methods (__init__, __repr__, etc.).
     topics:
-      - topic: Class Definition and Inheritance
-        description: >
-          Classes define blueprints for objects. Python supports single and
-          multiple inheritance with method resolution order (MRO).
+      - title: Class Definition and Inheritance
+        description: "Classes with __init__, inheritance via super()."
         examples:
-          - title: Basic Class with Inheritance
+          - description: "Inheritance chain"
             code: |
-              from typing import Self
-
               class Animal:
-                  """Base class for animals."""
-
                   def __init__(self, name: str, sound: str) -> None:
-                      self.name = name
-                      self.sound = sound
-
+                      self.name = name; self.sound = sound
                   def speak(self) -> str:
                       return f"{self.name} says {self.sound}"
 
-                  def __repr__(self) -> str:
-                      return f"{self.__class__.__name__}(name={self.name!r})"
-
               class Dog(Animal):
-                  """A dog that can fetch."""
-
                   def __init__(self, name: str) -> None:
                       super().__init__(name, "Woof")
-
                   def fetch(self, item: str) -> str:
                       return f"{self.name} fetches the {item}"
-
-              class GuideDog(Dog):
-                  """A specially trained guide dog."""
-
-                  def guide(self) -> str:
-                      return f"{self.name} is guiding safely"
-
-      - topic: Dataclasses
-        description: >
-          Dataclasses (Python 3.7+) automatically generate __init__, __repr__,
-          __eq__, and more from class annotations. Ideal for data-holding classes.
+      - title: Dataclasses
+        description: "Auto-generates __init__, __repr__, __eq__ from annotations."
         examples:
-          - title: Dataclass Usage
+          - description: "Mutable and frozen dataclasses"
             code: |
               from dataclasses import dataclass, field
-              from datetime import datetime
 
               @dataclass
               class User:
-                  """Represents a user in the system."""
                   name: str
                   email: str
-                  age: int
                   is_active: bool = True
-                  created_at: datetime = field(
-                      default_factory=datetime.now,
-                      repr=False,
-                  )
                   tags: list[str] = field(default_factory=list)
 
-              # Instances are compared by value
-              user1 = User("Alice", "alice@test.com", 30)
-              user2 = User("Alice", "alice@test.com", 30)
-              assert user1 == user2  # True
-
-              # Frozen (immutable) dataclass
               @dataclass(frozen=True, slots=True)
               class Point:
-                  x: float
-                  y: float
-
-                  def distance_to(self, other: "Point") -> float:
-                      return ((self.x - other.x) ** 2 +
-                              (self.y - other.y) ** 2) ** 0.5
-
-      - topic: Slots
-        description: >
-          __slots__ reduces memory usage and prevents dynamic attribute creation
-          by declaring a fixed set of instance attributes.
+                  x: float; y: float
+      - title: Properties and Methods
+        description: "@property for managed access, @classmethod for alternate constructors."
         examples:
-          - title: Using __slots__
-            code: |
-              class Point:
-                  __slots__ = ("x", "y")
-
-                  def __init__(self, x: float, y: float) -> None:
-                      self.x = x
-                      self.y = y
-
-              p = Point(1.0, 2.0)
-              p.x  # OK
-              p.z = 3.0  # AttributeError: 'Point' object has no attribute 'z'
-
-              # With inheritance (subclass needs its own slots)
-              class Point3D(Point):
-                  __slots__ = ("z",)
-
-                  def __init__(self, x: float, y: float, z: float) -> None:
-                      super().__init__(x, y)
-                      self.z = z
-
-      - topic: Properties
-        description: >
-          Properties provide managed attribute access with getter, setter, and
-          deleter methods. They allow computed attributes with validation.
-        examples:
-          - title: Property with Validation
+          - description: "Property with validation"
             code: |
               class Temperature:
-                  """Temperature with Celsius storage and Fahrenheit property."""
-
                   def __init__(self, celsius: float = 0.0) -> None:
                       self._celsius = celsius
 
@@ -626,365 +153,56 @@ sections:
                   def fahrenheit(self) -> float:
                       return self._celsius * 9 / 5 + 32
 
-                  @fahrenheit.setter
-                  def fahrenheit(self, value: float) -> None:
-                      self.celsius = (value - 32) * 5 / 9
-
-      - topic: Class Methods and Static Methods
-        description: >
-          @classmethod receives the class as the first argument (cls).
-          @staticmethod receives no implicit first argument.
-        examples:
-          - title: Class Methods and Static Methods
-            code: |
-              from datetime import datetime
-
-              class Event:
-                  def __init__(self, name: str, date: datetime) -> None:
-                      self.name = name
-                      self.date = date
-
-                  @classmethod
-                  def from_string(cls, event_str: str) -> "Event":
-                      """Create an Event from 'name|YYYY-MM-DD' format."""
-                      name, date_str = event_str.split("|")
-                      date = datetime.fromisoformat(date_str)
-                      return cls(name, date)
-
-                  @classmethod
-                  def create_today(cls, name: str) -> "Event":
-                      """Create an event for today."""
-                      return cls(name, datetime.now())
-
-                  @staticmethod
-                  def is_valid_date(date_str: str) -> bool:
-                      """Check if a string is a valid ISO date."""
-                      try:
-                          datetime.fromisoformat(date_str)
-                          return True
-                      except ValueError:
-                          return False
-
-  # =========================================================================
-  # Modules
-  # =========================================================================
-  - title: Modules
+  - title: Comprehensions
     description: >
-      Python modules are files containing Python code. Packages are directories
-      with __init__.py. Imports bring module contents into the current namespace.
-
+      Concise syntax for creating lists, sets, and dicts.
+      Generator expressions provide lazy evaluation for large datasets.
     topics:
-      - topic: Import Statements
-        description: >
-          Python supports several import styles. Follow the convention of
-          grouping imports: standard library, third-party, local.
+      - title: List, Dict, and Set Comprehensions
+        description: "Create collections from iterables with transforms and filters."
         examples:
-          - title: Import Styles
+          - description: "All comprehension forms"
             code: |
-              # Import entire module
-              import os
-              import json
-              import sys
-
-              # Import with alias
-              import numpy as np
-              import pandas as pd
-
-              # Import specific names
-              from pathlib import Path
-              from typing import Optional, Union
-              from collections import defaultdict, Counter
-
-              # Import all (avoid in production code)
-              from math import *
-
-              # Conditional import
-              try:
-                  import ujson as json  # Faster JSON
-              except ImportError:
-                  import json
-
-      - topic: Package Structure
-        description: >
-          Packages organize modules into a directory hierarchy. The __init__.py
-          file marks a directory as a package and controls what is exported.
+              squares = [x ** 2 for x in range(10)]
+              evens = [x for x in range(20) if x % 2 == 0]
+              flat = [n for row in [[1, 2], [3, 4]] for n in row]
+              word_lengths = {w: len(w) for w in ["hello", "world"]}
+              unique_lengths = {len(w) for w in ["hello", "world", "hi"]}
+      - title: Generator Expressions
+        description: "Lazy comprehensions using parentheses."
         examples:
-          - title: Package Layout
+          - description: "Generator expressions and functions"
             code: |
-              # Directory structure:
-              # mypackage/
-              #     __init__.py
-              #     core.py
-              #     utils.py
-              #     subpackage/
-              #         __init__.py
-              #         helpers.py
+              total = sum(x ** 2 for x in range(1_000_000))
+              max_val = max(x for x in numbers if x > 0)
 
-              # mypackage/__init__.py
-              from .core import main
-              from .utils import helper
+              def fibonacci():
+                  a, b = 0, 1
+                  while True:
+                      yield a; a, b = b, a + b
 
-              __all__ = ["main", "helper"]
-
-              # mypackage/core.py
-              def main() -> None:
-                  ...
-
-          - title: Relative Imports
-            code: |
-              # Inside mypackage/utils.py:
-              from . import core            # Import sibling module
-              from .core import main        # Import from sibling
-              from .subpackage import helpers  # Import from subpackage
-              from .. import other_package  # Import from parent
-
-              # Relative imports only work within packages, not in scripts
-
-  # =========================================================================
-  # Context Managers
-  # =========================================================================
   - title: Context Managers
     description: >
-      Context managers manage resource acquisition and release using the 'with'
-      statement. They ensure cleanup code runs even if an exception occurs.
-
+      The with statement ensures setup and teardown always run.
+      Use contextlib.contextmanager for function-based managers.
     topics:
-      - topic: The with Statement
-        description: >
-          The 'with' statement creates a context that automatically handles
-          setup and teardown of resources.
+      - title: Using and Creating Context Managers
+        description: "Built-in with and @contextmanager decorator."
         examples:
-          - title: Using Context Managers
-            code: |
-              from pathlib import Path
-
-              # File handling
-              with open("data.txt", "r") as f:
-                  content = f.read()
-              # File is automatically closed
-
-              # Multiple context managers
-              with open("input.txt") as src, open("output.txt", "w") as dst:
-                  dst.write(src.read())
-
-              # Python 3.10+: parenthesized context managers
-              with (
-                  open("input.txt") as src,
-                  open("output.txt", "w") as dst,
-              ):
-                  dst.write(src.read())
-
-          - title: Creating Context Managers
+          - description: "contextlib and class-based"
             code: |
               from contextlib import contextmanager
-              from typing import Generator
 
-              # Using contextlib.contextmanager
+              with open("data.txt") as f:
+                  content = f.read()
+
               @contextmanager
-              def timer(label: str) -> Generator[None, None, None]:
-                  """Time a block of code."""
+              def timer(label: str):
                   import time
                   start = time.perf_counter()
-                  try:
-                      yield
-                  finally:
-                      elapsed = time.perf_counter() - start
-                      print(f"{label}: {elapsed:.4f}s")
+                  try: yield
+                  finally: print(f"{label}: {time.perf_counter() - start:.4f}s")
 
-              with timer("Data processing"):
-                  process_data()
-
-          - title: Class-based Context Manager
-            code: |
-              from types import TracebackType
-
-              class DatabaseConnection:
-                  def __init__(self, url: str) -> None:
-                      self.url = url
-                      self.connection = None
-
-                  def __enter__(self) -> "DatabaseConnection":
-                      self.connection = self._connect(self.url)
-                      return self
-
-                  def __exit__(
-                      self,
-                      exc_type: type[BaseException] | None,
-                      exc_val: BaseException | None,
-                      exc_tb: TracebackType | None,
-                  ) -> bool:
-                      if self.connection:
-                          self.connection.close()
-                      return False  # Don't suppress exceptions
-
-              with DatabaseConnection("postgres://...") as db:
-                  db.execute("SELECT 1")
-
-      - topic: Async Context Managers
-        description: >
-          Async context managers use 'async with' and the __aenter__/__aexit__
-          protocol for asynchronous resource management.
-        examples:
-          - title: Async Context Managers
-            code: |
-              from contextlib import asynccontextmanager
-              from typing import AsyncGenerator
-              import aiohttp
-
-              @asynccontextmanager
-              async def http_session() -> AsyncGenerator[aiohttp.ClientSession, None]:
-                  session = aiohttp.ClientSession()
-                  try:
-                      yield session
-                  finally:
-                      await session.close()
-
-              async def fetch(url: str) -> dict:
-                  async with http_session() as session:
-                      async with session.get(url) as response:
-                          return await response.json()
-
-              # Class-based async context manager
-              class AsyncDB:
-                  async def __aenter__(self) -> "AsyncDB":
-                      self.conn = await create_connection()
-                      return self
-
-                  async def __aexit__(self, *args: object) -> None:
-                      await self.conn.close()
-
-  # =========================================================================
-  # Async Programming
-  # =========================================================================
-  - title: Async Programming
-    description: >
-      Python's asyncio provides infrastructure for writing single-threaded
-      concurrent code using coroutines, multiplexing I/O access, and running
-      network clients and servers.
-
-    topics:
-      - topic: Async Def and Await
-        description: >
-          'async def' defines a coroutine function. 'await' suspends execution
-          of the current coroutine until the awaited result is available.
-        examples:
-          - title: Basic Async/Await
-            code: |
-              import asyncio
-
-              async def fetch_user(user_id: int) -> dict:
-                  """Fetch a user from the API."""
-                  await asyncio.sleep(1)  # Simulates I/O
-                  return {"id": user_id, "name": f"User_{user_id}"}
-
-              async def fetch_posts(user_id: int) -> list[dict]:
-                  """Fetch posts for a user."""
-                  await asyncio.sleep(0.5)
-                  return [{"title": f"Post {i}"} for i in range(3)]
-
-              async def get_user_with_posts(user_id: int) -> dict:
-                  """Get user and their posts."""
-                  user = await fetch_user(user_id)
-                  posts = await fetch_posts(user_id)
-                  return {"user": user, "posts": posts}
-
-              # Run a coroutine
-              result = asyncio.run(get_user_with_posts(1))
-
-      - topic: asyncio.gather
-        description: >
-          asyncio.gather runs multiple coroutines concurrently and collects
-          their results. All tasks run concurrently but results are returned
-          in the order they were passed.
-        examples:
-          - title: Concurrent Execution with gather
-            code: |
-              import asyncio
-
-              async def fetch(url: str) -> str:
-                  await asyncio.sleep(1)
-                  return f"Response from {url}"
-
-              async def main() -> None:
-                  urls = [
-                      "https://api.example.com/a",
-                      "https://api.example.com/b",
-                      "https://api.example.com/c",
-                  ]
-
-                  # Run all concurrently
-                  results = await asyncio.gather(
-                      *(fetch(url) for url in urls)
-                  )
-                  for result in results:
-                      print(result)
-
-              asyncio.run(main())
-
-      - topic: asyncio.create_task
-        description: >
-          create_task schedules a coroutine to run concurrently as a Task.
-          Unlike gather, tasks start immediately and can be awaited later.
-        examples:
-          - title: Creating Tasks
-            code: |
-              import asyncio
-
-              async def background_cleanup() -> None:
-                  while True:
-                      await asyncio.sleep(60)
-                      print("Running cleanup...")
-
-              async def handle_request(request_id: int) -> dict:
-                  await asyncio.sleep(0.1)
-                  return {"id": request_id, "status": "ok"}
-
-              async def main() -> None:
-                  # Start background task
-                  cleanup_task = asyncio.create_task(background_cleanup())
-
-                  # Process requests concurrently
-                  tasks = [
-                      asyncio.create_task(handle_request(i))
-                      for i in range(10)
-                  ]
-
-                  results = await asyncio.gather(*tasks)
-
-                  # Cancel background task when done
-                  cleanup_task.cancel()
-                  try:
-                      await cleanup_task
-                  except asyncio.CancelledError:
-                      print("Cleanup cancelled")
-
-              asyncio.run(main())
-
-      - topic: TaskGroups (Python 3.11+)
-        description: >
-          TaskGroup provides structured concurrency. All tasks in the group
-          are cancelled if any task raises an exception.
-        examples:
-          - title: TaskGroup Usage
-            code: |
-              import asyncio
-
-              async def fetch(url: str) -> str:
-                  await asyncio.sleep(1)
-                  if "error" in url:
-                      raise ValueError(f"Failed: {url}")
-                  return f"OK: {url}"
-
-              async def main() -> None:
-                  try:
-                      async with asyncio.TaskGroup() as tg:
-                          task1 = tg.create_task(fetch("https://ok.com"))
-                          task2 = tg.create_task(fetch("https://ok.com"))
-                          task3 = tg.create_task(fetch("https://error.com"))
-
-                      # All tasks completed (or exception was raised)
-                  except* ValueError as eg:
-                      for exc in eg.exceptions:
-                          print(f"Error: {exc}")
-
-              asyncio.run(main())
+              class DB:
+                  def __enter__(self): return self
+                  def __exit__(self, *args): self.close(); return False

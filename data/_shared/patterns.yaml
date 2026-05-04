@@ -1,104 +1,69 @@
-version: 1
+version: "1"
 patterns:
-  - id: error-handling
-    name: Error Handling Pattern
-    category: reliability
-    intent: "Provide a structured way to handle errors that separates error detection from error handling, making code more robust and maintainable."
-    structure:
-      - component: "Error Types"
-        description: "Define specific error types for different failure scenarios"
-      - component: "Try-Catch Blocks"
-        description: "Wrap operations that may fail in try-catch blocks"
-      - component: "Error Propagation"
-        description: "Propagate errors up the call stack with context"
-      - component: "Error Recovery"
-        description: "Implement fallback strategies when appropriate"
-    when_to_use:
-      - "When performing I/O operations (file, network, database)"
-      - "When parsing external data (JSON, XML, user input)"
-      - "When calling external services or APIs"
-      - "When operations may fail for expected reasons"
-    when_to_avoid:
-      - "For control flow (use conditionals instead)"
-      - "For expected states (use return values)"
-      - "When the error cannot be meaningfully handled"
-    related_patterns:
-      - "Result Type"
-      - "Option Type"
-      - "Circuit Breaker"
+  - name: "Error Handling"
+    category: "reliability"
+    description: "Provide a structured way to handle errors that separates error detection from error handling, making code more robust and maintainable."
+    when: |
+      When performing I/O operations (file, network, database)
+      When parsing external data (JSON, XML, user input)
+      When calling external services or APIs
+      When operations may fail for expected reasons
+    example: |
+      try {
+        const data = JSON.parse(input);
+        return process(data);
+      } catch (err) {
+        if (err instanceof SyntaxError) {
+          logger.warn("Invalid JSON input", { input });
+          return fallbackValue;
+        }
+        throw err; // re-throw unexpected errors
+      }
+    relatedPatterns: ["Result Type", "Option Type", "Circuit Breaker"]
 
-  - id: iterator
-    name: Iterator Pattern
-    category: behavioral
-    intent: "Provide a way to access elements of a collection sequentially without exposing its underlying representation."
-    structure:
-      - component: "Iterator Interface"
-        description: "Defines methods for traversing elements (next, hasNext, current)"
-      - component: "Concrete Iterator"
-        description: "Implements the iterator interface for a specific collection"
-      - component: "Collection"
-        description: "Defines a method to create an iterator"
-      - component: "Concrete Collection"
-        description: "Implements the collection interface and returns a concrete iterator"
-    when_to_use:
-      - "When you need to traverse a collection without exposing its internal structure"
-      - "When you need multiple ways to traverse the same collection"
-      - "When you want to provide a uniform interface for different collection types"
-    when_to_avoid:
-      - "When direct access to elements is more efficient"
-      - "When the collection is simple and unlikely to change"
-    related_patterns:
-      - "Composite"
-      - "Factory Method"
-      - "Memento"
+  - name: "Iterator"
+    category: "behavioral"
+    description: "Provide a way to access elements of a collection sequentially without exposing its underlying representation."
+    when: |
+      When you need to traverse a collection without exposing its internal structure
+      When you need multiple ways to traverse the same collection
+      When you want a uniform interface for different collection types
+    example: |
+      for (const item of collection) {
+        if (item.matches(filter)) {
+          yield transform(item);
+        }
+      }
+    relatedPatterns: ["Composite", "Factory Method"]
 
-  - id: observer
-    name: Observer Pattern
-    category: behavioral
-    intent: "Define a one-to-many dependency between objects so that when one object changes state, all its dependents are notified and updated automatically."
-    structure:
-      - component: "Subject"
-        description: "Maintains a list of observers and provides methods to attach/detach them"
-      - component: "Observer Interface"
-        description: "Defines the update method that subjects call"
-      - component: "Concrete Observer"
-        description: "Implements the observer interface to react to subject changes"
-      - component: "Event Data"
-        description: "Optional data passed with notifications"
-    when_to_use:
-      - "When changes to one object require changing others"
-      - "When an object should notify other objects without knowing who they are"
-      - "When you need to implement event-driven architectures"
-    when_to_avoid:
-      - "When the number of observers is very large (performance)"
-      - "When the order of notifications matters"
-      - "When circular dependencies could occur"
-    related_patterns:
-      - "Mediator"
-      - "Singleton"
-      - "Event Bus"
+  - name: "Observer"
+    category: "behavioral"
+    description: "Define a one-to-many dependency between objects so that when one object changes state, all its dependents are notified and updated automatically."
+    when: |
+      When changes to one object require changing others
+      When an object should notify others without knowing who they are
+      When implementing event-driven architectures
+    example: |
+      emitter.on("data", (event) => {
+        pipeline.process(event.payload);
+      });
+      emitter.on("error", (event) => {
+        logger.error("Pipeline failed", { error: event.error });
+      });
+    relatedPatterns: ["Mediator", "Event Bus"]
 
-  - id: strategy
-    name: Strategy Pattern
-    category: behavioral
-    intent: "Define a family of algorithms, encapsulate each one, and make them interchangeable. Strategy lets the algorithm vary independently from clients that use it."
-    structure:
-      - component: "Strategy Interface"
-        description: "Declares an interface common to all supported algorithms"
-      - component: "Concrete Strategy"
-        description: "Implements the algorithm using the strategy interface"
-      - component: "Context"
-        description: "Maintains a reference to a strategy object and delegates algorithm execution"
-      - component: "Strategy Factory"
-        description: "Optional: Creates appropriate strategy based on configuration"
-    when_to_use:
-      - "When you have multiple algorithms for a specific task"
-      - "When you want to select algorithms at runtime"
-      - "when you want to isolate algorithm implementation from the code that uses it"
-    when_to_avoid:
-      - "When there are only a few algorithms that rarely change"
-      - "When clients shouldn't need to know about different strategies"
-    related_patterns:
-      - "Factory Method"
-      - "State"
-      - "Template Method"
+  - name: "Strategy"
+    category: "behavioral"
+    description: "Define a family of algorithms, encapsulate each one, and make them interchangeable. Strategy lets the algorithm vary independently from clients that use it."
+    when: |
+      When you have multiple algorithms for a specific task
+      When you want to select algorithms at runtime
+      When you want to isolate algorithm implementation from usage
+    example: |
+      interface SortStrategy {
+        sort<T>(items: T[]): T[];
+      }
+      function sortList<T>(items: T[], strategy: SortStrategy): T[] {
+        return strategy.sort([...items]);
+      }
+    relatedPatterns: ["Factory Method", "State", "Template Method"]

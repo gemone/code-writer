@@ -31,3 +31,15 @@ languages:
       - dynamic-typing
       - scripting
       - data-science
+  zig:
+    name: Zig
+    version: '0.16'
+    extensions:
+      - .zig
+      - .zon
+    aliases: []
+    dataDir: zig
+    tags:
+      - systems-programming
+      - manual-memory
+      - comptime

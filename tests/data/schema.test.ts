@@ -91,4 +91,82 @@ describe('Zod Schema Validation', () => {
       expect(result.patterns.length).toBeGreaterThan(0);
     });
   });
+
+  describe('Zig data files', () => {
+    const zigDir = path.join(dataDir, 'zig');
+
+    it('should parse language.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(zigDir, 'language.yaml'), 'utf-8'));
+      const result = LanguageMetaSchema.parse(raw);
+      expect(result.name).toBe('Zig');
+    });
+
+    it('should parse stdlib.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(zigDir, 'stdlib.yaml'), 'utf-8'));
+      const result = StdlibSchema.parse(raw);
+      expect(result.modules.length).toBeGreaterThan(0);
+    });
+
+    it('should parse syntax.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(zigDir, 'syntax.yaml'), 'utf-8'));
+      const result = SyntaxSchema.parse(raw);
+      expect(result.sections.length).toBeGreaterThan(0);
+    });
+
+    it('should parse conventions.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(zigDir, 'conventions.yaml'), 'utf-8'));
+      const result = ConventionsSchema.parse(raw);
+      expect(result.conventions.length).toBeGreaterThan(0);
+    });
+
+    it('should parse patterns.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(zigDir, 'patterns.yaml'), 'utf-8'));
+      const result = PatternsSchema.parse(raw);
+      expect(result.patterns.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('_shared patterns', () => {
+    it('should parse _shared/patterns.yaml with unified format', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(dataDir, '_shared/patterns.yaml'), 'utf-8'));
+      const result = PatternsSchema.parse(raw);
+      expect(result.patterns.length).toBeGreaterThan(0);
+      for (const p of result.patterns) {
+        expect(p.name).toBeDefined();
+        expect(p.description).toBeDefined();
+      }
+    });
+  });
+
+  describe('_template files', () => {
+    it('should parse _template/language.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(dataDir, '_template/language.yaml'), 'utf-8'));
+      const result = LanguageMetaSchema.parse(raw);
+      expect(result.name).toBeDefined();
+    });
+
+    it('should parse _template/stdlib.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(dataDir, '_template/stdlib.yaml'), 'utf-8'));
+      const result = StdlibSchema.parse(raw);
+      expect(result.modules.length).toBeGreaterThan(0);
+    });
+
+    it('should parse _template/syntax.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(dataDir, '_template/syntax.yaml'), 'utf-8'));
+      const result = SyntaxSchema.parse(raw);
+      expect(result.sections.length).toBeGreaterThan(0);
+    });
+
+    it('should parse _template/conventions.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(dataDir, '_template/conventions.yaml'), 'utf-8'));
+      const result = ConventionsSchema.parse(raw);
+      expect(result.conventions.length).toBeGreaterThan(0);
+    });
+
+    it('should parse _template/patterns.yaml', () => {
+      const raw = yaml.load(fs.readFileSync(path.join(dataDir, '_template/patterns.yaml'), 'utf-8'));
+      const result = PatternsSchema.parse(raw);
+      expect(result.patterns.length).toBeGreaterThan(0);
+    });
+  });
 });

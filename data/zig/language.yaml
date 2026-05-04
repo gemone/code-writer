@@ -1,0 +1,188 @@
+# Zig Language Metadata
+# Code Standards Plugin - Language Reference
+
+version: 1
+language:
+  name: Zig
+  version: "0.16"
+  website: https://ziglang.org
+  documentation: https://ziglang.org/documentation/master/
+  extensions:
+    - .zig
+  aliases:
+    - zig
+
+  typing:
+    system: static
+    inference: true
+    generics: true
+
+  paradigms:
+    - imperative
+    - systems
+    - concurrent
+    - procedural
+
+  compilation:
+    type: compiled
+    target: native (via LLVM, supports cross-compilation)
+
+  features:
+    - comptime-evaluation
+    - error-union-types
+    - defer-errdefer
+    - explicit-allocator
+    - no-hidden-control-flow
+    - optional-types
+
+  ecosystem:
+    package_manager: build.zig (zig build)
+    build_tools:
+      - zig-build
+    testing:
+      - zig-test
+    linting: []
+
+  quickReference:
+
+    variableDeclaration:
+      description: "Declare variables with const (immutable) or var (mutable). Type inference is supported."
+      example: |
+        // Explicit types
+        const x: u32 = 42;
+        var counter: u32 = 0;
+
+        // Type inference
+        const name = "zig";
+
+        // Optional
+        var maybe: ?u32 = null;
+        maybe = 42;
+        if (maybe) |val| {
+            // val is unwrapped to u32
+        }
+
+        // SCREAMING_SNAKE for comptime constants
+        const MAX_SIZE: usize = 1024;
+
+    functionDeclaration:
+      description: "Functions use fn keyword. Parameters are immutable by default. Use !T for error unions."
+      example: |
+        // Basic function
+        fn add(a: i32, b: i32) i32 {
+            return a + b;
+        }
+
+        // Error union return
+        fn read_file(alloc: std.mem.Allocator, path: []const u8) ![]u8 {
+            const file = try std.fs.cwd().openFile(path, .{});
+            defer file.close();
+            return try file.readToEndAlloc(alloc, 1024 * 1024);
+        }
+
+        // Generic function
+        fn max(comptime T: type, a: T, b: T) T {
+            return if (a > b) a else b;
+        }
+
+    controlFlow:
+      description: "if/else, for, while, and switch. if and while support optional unwrapping. switch is exhaustive."
+      example: |
+        // if/else (works as expression)
+        const label = if (x > 0) "positive" else "non-positive";
+
+        // Optional unwrapping
+        if (maybe) |val| {
+            use(val);
+        }
+
+        // for loops
+        for (items) |item| { process(item); }
+        for (0..10) |i| { std.debug.print("{d}\n", .{i}); }
+
+        // while with continue expression
+        var i: u32 = 0;
+        while (i < 10) : (i += 1) { /* ... */ }
+
+        // Exhaustive switch
+        switch (direction) {
+            .north => "up",
+            .south => "down",
+            .east => "right",
+            .west => "left",
+        }
+
+    structDeclaration:
+      description: "Structs are value types with methods as functions taking self parameter. Use PascalCase."
+      example: |
+        const Point = struct {
+            x: f64,
+            y: f64,
+
+            pub fn distance(self: Point, other: Point) f64 {
+                const dx = self.x - other.x;
+                const dy = self.y - other.y;
+                return @sqrt(dx * dx + dy * dy);
+            }
+        };
+
+        const p = Point{ .x = 1.0, .y = 2.0 };
+
+        // Tagged union
+        const Value = union(enum) {
+            integer: i64,
+            float: f64,
+            string: []const u8,
+        };
+
+    errorHandling:
+      description: "Error unions (!Type) for explicit error handling. Use try to propagate, catch to handle, defer for cleanup."
+      example: |
+        // Error set and error union
+        const ParseError = error{ InvalidInput, Overflow };
+        fn parse(s: []const u8) ParseError!u32 {
+            return std.fmt.parseInt(u32, s, 10);
+        }
+
+        // Propagate with try
+        const n = try parse("42");
+
+        // Handle with catch
+        const n = parse("abc") catch |err| {
+            std.debug.print("error: {}\n", .{err});
+            return 0;
+        };
+
+        // defer / errdefer for cleanup
+        fn process(alloc: std.mem.Allocator) !void {
+            const buf = try alloc.alloc(u8, 1024);
+            defer alloc.free(buf);        // always runs
+            errdefer alloc.free(result);  // only on error
+        }
+
+    memory:
+      description: "All allocation is explicit via Allocator parameter. Use defer for cleanup. No global allocators."
+      example: |
+        // Pass allocator as parameter
+        fn create_list(alloc: std.mem.Allocator) !std.ArrayList(u8) {
+            var list = std.ArrayList(u8).init(alloc);
+            try list.append(alloc, 'x');
+            return list;
+        }
+
+        // Juicy Main (0.16) — allocators from init
+        pub fn main(init: std.process.Init) !void {
+            const gpa = init.gpa;
+            const alloc = init.arena.allocator();
+
+            var list = std.ArrayList(u8).init(gpa);
+            defer list.deinit(gpa);
+            try list.append(gpa, 'h');
+        }
+
+        // Testing with leak detection
+        test "no leaks" {
+            const alloc = std.testing.allocator;
+            const buf = try alloc.alloc(u8, 100);
+            defer alloc.free(buf);
+        }

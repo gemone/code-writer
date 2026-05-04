@@ -1,0 +1,106 @@
+# Zig Design Patterns
+# Minimal seed — use lang_fetch to populate comprehensive data
+
+version: "1"
+language: zig
+patterns:
+  # =========================================================================
+  # Error Set Pattern
+  # =========================================================================
+  - name: Error Set Pattern
+    category: behavioral
+    description: >
+      Handle errors explicitly using Zig's error unions (error!T) instead of exceptions.
+      Functions that can fail return error!T. Use try to propagate errors up the call
+      stack, or catch to handle them at the boundary.
+    whenToUse:
+      - "Any operation that can fail (I/O, parsing, allocation)"
+      - "When you need to communicate specific failure modes to callers"
+    example: |
+      fn readConfig(path: []const u8) !Config {
+          const file = try std.fs.cwd().openFile(path, .{});
+          defer file.close();
+          const data = try file.readToEndAlloc(alloc, 1024 * 1024);
+          defer alloc.free(data);
+          return try std.json.parseFromSlice(Config, alloc, data, .{});
+      }
+
+      // Propagation
+      fn loadApp() !void {
+          const config = try readConfig("config.json");
+      }
+
+      // Handling
+      const config = readConfig("config.json") catch |err| {
+          std.debug.print("error: {}\n", .{err});
+          return;
+      };
+    relatedPatterns:
+      - "Result Type"
+      - "Railway Oriented Programming"
+
+  # =========================================================================
+  # Allocator Pattern
+  # =========================================================================
+  - name: Allocator Pattern
+    category: creational
+    description: >
+      Pass allocators explicitly as parameters. Zig has no hidden allocations — every
+      function that needs memory receives an Allocator, enabling leak detection in tests
+      and custom allocation strategies. In 0.16, use init.gpa from Juicy Main.
+    whenToUse:
+      - "Any function that needs to allocate memory"
+      - "Library code that should work with any allocation strategy"
+      - "Code that needs leak detection in tests"
+    example: |
+      fn createBuffer(alloc: std.mem.Allocator, size: usize) ![]u8 {
+          const buf = try alloc.alloc(u8, size);
+          errdefer alloc.free(buf);
+          return buf;
+      }
+
+      pub fn main(init: std.process.Init) !void {
+          const gpa = init.gpa;
+          const buf = try createBuffer(gpa, 1024);
+          defer gpa.free(buf);
+      }
+
+      test "no leaks" {
+          const buf = try createBuffer(std.testing.allocator, 1024);
+          defer std.testing.allocator.free(buf);
+      }
+    relatedPatterns:
+      - "Dependency Injection"
+
+  # =========================================================================
+  # Comptime Pattern
+  # =========================================================================
+  - name: Comptime Pattern
+    category: creational
+    description: >
+      Use comptime for compile-time type parameters, validation, and generic programming.
+      Zig monomorphizes each instantiation at compile time — no runtime dispatch or
+      type erasure.
+    whenToUse:
+      - "Data structures that work with any type (generic containers)"
+      - "Compile-time validation or computation"
+    example: |
+      fn Stack(comptime T: type) type {
+          return struct {
+              items: std.ArrayList(T),
+              pub fn init(alloc: Allocator) @This() {
+                  return .{ .items = std.ArrayList(T).init(alloc) };
+              }
+              pub fn push(self: *@This(), value: T) !void {
+                  try self.items.append(value);
+              }
+          };
+      }
+
+      const IntStack = Stack(i32);
+      var stack = IntStack.init(alloc);
+      defer stack.items.deinit(alloc);
+      try stack.push(42);
+    relatedPatterns:
+      - "Generic Programming"
+      - "Monomorphization"
