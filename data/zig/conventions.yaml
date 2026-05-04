@@ -1,10 +1,12 @@
-# Zig Coding Conventions
-# Minimal seed — use lang_fetch to populate comprehensive data
+# Zig Coding Conventions (v0.16.0)
+# Comprehensive style guide
 
 version: "1"
 language: zig
 conventions:
+  # =========================================================================
   # Naming
+  # =========================================================================
   - id: naming-snake-case
     name: "Use snake_case for variables and functions"
     severity: warn
@@ -41,7 +43,21 @@ conventions:
     references:
       - "https://ziglang.org/documentation/master/#Naming-Style"
 
+  - id: naming-enum-fields-snake
+    name: "snake_case for enum and union field names"
+    severity: warn
+    category: naming
+    description: Enum and union fields use snake_case. The type itself uses PascalCase.
+    rule: "PascalCase for type, snake_case for fields"
+    examples:
+      bad: ["const Error = enum { NotFound, AccessDenied };"]
+      good: ["const Error = enum { not_found, access_denied };"]
+    references:
+      - "https://ziglang.org/documentation/master/#Naming-Style"
+
+  # =========================================================================
   # Error Handling
+  # =========================================================================
   - id: error-handling-try-catch
     name: "Use try/catch for error handling"
     severity: error
@@ -54,7 +70,6 @@ conventions:
     references:
       - "https://ziglang.org/documentation/master/#Error-Handling"
 
-  # Resource Management
   - id: defer-cleanup
     name: "Use defer for resource cleanup"
     severity: warn
@@ -67,7 +82,21 @@ conventions:
     references:
       - "https://ziglang.org/documentation/master/#defer"
 
-  # Memory
+  - id: error-set-specific
+    name: "Declare specific error sets for public APIs"
+    severity: info
+    category: error-handling
+    description: Public functions should declare explicit error sets rather than using inferred error unions.
+    rule: "Prefer explicit error sets for public functions"
+    examples:
+      bad: ["pub fn parse(s: []const u8) !Config { ... }"]
+      good: ["pub const ParseError = error{ InvalidSyntax, MissingField };\npub fn parse(s: []const u8) ParseError!Config { ... }"]
+    references:
+      - "https://ziglang.org/documentation/master/#Error-Set-Type"
+
+  # =========================================================================
+  # Memory Management
+  # =========================================================================
   - id: explicit-allocator
     name: "Pass allocators explicitly"
     severity: error
@@ -80,12 +109,38 @@ conventions:
     references:
       - "https://ziglang.org/documentation/master/#Memory"
 
-  # I/O (0.16)
+  - id: juicy-main
+    name: "Use Juicy Main pattern (0.16+)"
+    severity: error
+    category: entry-point
+    description: "main receives std.process.Init providing Io, GPA allocator, arena, args, and env."
+    rule: "Use pub fn main(init: std.process.Init) !void"
+    examples:
+      bad: ["pub fn main() !void { var gpa = std.heap.GeneralPurposeAllocator(.{}){}; }"]
+      good: ["pub fn main(init: std.process.Init) !void { const gpa = init.gpa; const io = init.io; }"]
+    references:
+      - "https://ziglang.org/download/0.16.0/release-notes.html"
+
+  - id: const-over-var
+    name: "Prefer const over var"
+    severity: warn
+    category: mutability
+    description: Use const by default. Only use var when mutation is actually needed.
+    rule: "Use const unless mutation is required"
+    examples:
+      bad: ["var name = \"zig\";", "var count: u32 = 42;"]
+      good: ["const name = \"zig\";", "const count: u32 = 42;", "var counter: u32 = 0; // needs mutation"]
+    references:
+      - "https://ziglang.org/documentation/master/#Values"
+
+  # =========================================================================
+  # I/O (0.16+)
+  # =========================================================================
   - id: io-instance-required
-    name: "I/O as Interface (0.16+)"
+    name: "I/O requires Io instance (0.16+)"
     severity: error
     category: io
-    description: All I/O requires an Io instance from std.process.Init in main. Use std.testing.io in tests.
+    description: All I/O requires an Io instance from std.process.Init. Use std.testing.io in tests.
     rule: "Accept Io from init or as parameter; use std.testing.io in tests"
     examples:
       bad: ["const file = try std.fs.cwd().openFile(\"data.txt\", .{});"]
@@ -93,15 +148,116 @@ conventions:
     references:
       - "https://ziglang.org/download/0.16.0/release-notes.html"
 
-  - id: juicy-main
-    name: "Use Juicy Main pattern (0.16+)"
+  - id: close-requires-io
+    name: "File.close requires Io parameter (0.16+)"
     severity: error
-    category: entry-point
-    description: main receives std.process.Init providing Io, GPA allocator, arena, args, and env.
-    rule: "Use pub fn main(init: std.process.Init) !void"
+    category: io
+    description: "In 0.16, file.close() now takes an Io parameter: file.close(io)."
+    rule: "Use file.close(io) instead of file.close()"
     examples:
-      bad: ["pub fn main() !void { var gpa = std.heap.GeneralPurposeAllocator(.{}){}; }"]
-      good: ["pub fn main(init: std.process.Init) !void { const gpa = init.gpa; const io = init.io; }"]
+      bad: ["defer file.close();"]
+      good: ["defer file.close(io);"]
+    references:
+      - "https://ziglang.org/download/0.16.0/release-notes.html"
+
+  - id: use-io-sync-primitives
+    name: "Use std.Io sync primitives (0.16+)"
+    severity: warn
+    category: concurrency
+    description: "Sync primitives moved from std.Thread to std.Io: Mutex, Condition, RwLock, Semaphore, Event, Futex."
+    rule: "Use std.Io.Mutex, std.Io.Condition, etc. instead of std.Thread versions"
+    examples:
+      bad: ["var mutex: std.Thread.Mutex = .{};"]
+      good: ["var mutex: std.Io.Mutex = .{};"]
+    references:
+      - "https://ziglang.org/download/0.16.0/release-notes.html"
+
+  # =========================================================================
+  # Code Style
+  # =========================================================================
+  - id: prefer-explicit-types
+    name: "Prefer explicit types over anytype where possible"
+    severity: info
+    category: types
+    description: While anytype enables duck-typed generics, explicit types improve error messages and API clarity for public functions.
+    rule: "Use explicit types for public APIs; anytype for internal generic code"
+    examples:
+      bad: ["pub fn process(data: anytype) void { ... }"]
+      good: ["pub fn process(data: []const u8) void { ... }", "pub fn process(comptime T: type, data: []const T) void { ... }"]
+
+  - id: avoid-unreachable
+    name: "Avoid unreachable except in exhaustively-switched cases"
+    severity: warn
+    category: safety
+    description: unreachable is undefined behavior if reached. Only use after exhaustive switch or in noreturn functions.
+    rule: "Use unreachable only when all cases are provably handled"
+    examples:
+      bad: ["const x = arr[5]; // assume index in bounds\nunreachable; // hope for the best"]
+      good: ["switch (err) {\n    error.Overflow => handle_overflow(),\n    // promise InvalidChar won't happen\n    error.InvalidChar => unreachable,\n}"]
+    references:
+      - "https://ziglang.org/documentation/master/#unreachable"
+
+  - id: use-switch-expressions
+    name: "Prefer switch over if-else chains"
+    severity: info
+    category: style
+    description: switch is exhaustive and compile-time checked. Prefer it over if-else chains for enums, errors, and unions.
+    rule: "Use switch for enum/error/union matching"
+    examples:
+      bad: ["if (dir == .north) { ... } else if (dir == .south) { ... } else if (dir == .east) { ... } else { ... }"]
+      good: ["switch (dir) {\n    .north => { ... },\n    .south => { ... },\n    .east => { ... },\n    .west => { ... },\n}"]
+    references:
+      - "https://ziglang.org/documentation/master/#switch"
+
+  - id: explicit-return-types
+    name: "Prefer explicit return types"
+    severity: info
+    category: types
+    description: Avoid relying on type inference for function return types. Explicit types improve readability and error messages.
+    rule: "Declare explicit return types on all functions"
+    examples:
+      bad: ["fn add(a: i32, b: i32) @TypeOf(a + b) { return a + b; }"]
+      good: ["fn add(a: i32, b: i32) i32 { return a + b; }"]
+
+  # =========================================================================
+  # Testing
+  # =========================================================================
+  - id: use-testing-allocator
+    name: "Use std.testing.allocator in tests"
+    severity: error
+    category: testing
+    description: Always use std.testing.allocator in tests — it detects memory leaks automatically.
+    rule: "Use std.testing.allocator in all tests that allocate"
+    examples:
+      bad: ["test \"leaks\" {\n    var gpa = std.heap.GeneralPurposeAllocator(.{}){};\n    const alloc = gpa.allocator();\n}"]
+      good: ["test \"no leaks\" {\n    const alloc = std.testing.allocator;\n    const buf = try alloc.alloc(u8, 100);\n    defer alloc.free(buf);\n}"]
+    references:
+      - "https://ziglang.org/documentation/master/#Testing"
+
+  # =========================================================================
+  # 0.16 Migration
+  # =========================================================================
+  - id: use-new-type-builtins
+    name: "Use new type-creating builtins (0.16+)"
+    severity: warn
+    category: migration
+    description: "@Type is removed in 0.16. Use @Int, @Struct, @Union, @Enum, @Tuple, @Pointer, @Fn instead."
+    rule: "Replace @Type with the specific builtin function"
+    examples:
+      bad: ["const T = @Type(.{ .int = .{ .signedness = .unsigned, .bits = 10 } });"]
+      good: ["const T = @Int(.unsigned, 10);"]
+    references:
+      - "https://ziglang.org/download/0.16.0/release-notes.html"
+
+  - id: use-mem-find
+    name: "Use std.mem.find instead of indexOf (0.16+)"
+    severity: warn
+    category: migration
+    description: "std.mem.indexOf renamed to std.mem.find in 0.16."
+    rule: "Replace indexOf with find"
+    examples:
+      bad: ["const idx = std.mem.indexOf(u8, haystack, needle);"]
+      good: ["const idx = std.mem.find(u8, haystack, needle);"]
     references:
       - "https://ziglang.org/download/0.16.0/release-notes.html"
 
@@ -126,3 +282,9 @@ namingConventions:
   fields:
     rule: "snake_case"
     examples: ["host", "port", "max_connections"]
+  files:
+    rule: "snake_case.zig"
+    examples: ["http_server.zig", "string_utils.zig"]
+  packages:
+    rule: "snake_case"
+    examples: ["std", "zig_network"]

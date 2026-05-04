@@ -1,0 +1,10 @@
+{
+  "name": "code-writer",
+  "version": "0.1.1",
+  "description": "Language-aware coding assistant with stdlib lookup, convention linting, AST operations, and cross-language comparison via MCP",
+  "author": {
+    "name": "gemone"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

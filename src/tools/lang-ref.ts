@@ -1,7 +1,15 @@
 import type { QueryEngine } from '../engine/query.js';
 import type { LanguageLoader } from '../engine/loader.js';
+import type { VectorStore } from '../engine/vector-store.js';
+import type { EmbeddingProvider } from '../engine/embedding.js';
+import { tryVectorSearch } from './vector-search.js';
 
-export function createLangRefTool(queryEngine: QueryEngine, loader: LanguageLoader) {
+export function createLangRefTool(
+  queryEngine: QueryEngine,
+  loader: LanguageLoader,
+  vectorStore: VectorStore | null,
+  embedding: EmbeddingProvider | null,
+) {
   return {
     name: 'lang_ref' as const,
     description: 'Look up programming language standard library API reference. Returns method signatures, descriptions, examples, and usage notes.',
@@ -19,7 +27,6 @@ export function createLangRefTool(queryEngine: QueryEngine, loader: LanguageLoad
       const depth = args.depth || 'full';
       const lang = args.language.toLowerCase();
 
-      // If only language, return meta + quick reference
       if (!args.module) {
         const meta = loader.loadLanguageMeta(lang);
         if (!meta) {
@@ -37,7 +44,26 @@ export function createLangRefTool(queryEngine: QueryEngine, loader: LanguageLoad
         return { content: [{ type: 'text' as const, text }] };
       }
 
-      // If module specified
+      const searchTerm = args.method ? `${args.module}.${args.method}` : args.module;
+      const vectorText = await tryVectorSearch(vectorStore, embedding, searchTerm, {
+        language: lang,
+        limit: args.method ? 3 : 10,
+      }, hits => {
+        let text = `# ${args.language} - ${args.module}\n\n`;
+        for (const { document: doc } of hits) {
+          text += `## ${doc.name}\n`;
+          if (doc.signature) text += `\`${doc.signature}\`\n\n`;
+          text += `${doc.description}\n\n`;
+          if (depth === 'full' && doc.code) {
+            text += `### Example\n\`\`\`\n${doc.code}\n\`\`\`\n\n`;
+          }
+          const tags = doc.tags as string[] | undefined;
+          if (tags) text += `Tags: ${tags.join(', ')}\n\n`;
+        }
+        return text;
+      });
+      if (vectorText) return { content: [{ type: 'text' as const, text: vectorText }] };
+
       const methods = queryEngine.getMethod(lang, args.module, args.method);
       if (methods.length === 0) {
         return { content: [{ type: 'text' as const, text: `No results for ${args.module}${args.method ? '.' + args.method : ''} in ${args.language}.` }] };

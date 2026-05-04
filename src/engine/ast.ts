@@ -92,7 +92,7 @@ export function findPattern(root: sg.SgRoot, pattern: string): MatchResult[] {
   const rootNode = root.root();
   const nodes = rootNode.findAll(pattern);
   if (!nodes) return [];
-  return nodes.map(n => nodeToMatch(n));
+  return nodes.map(n => nodeToMatch(n, pattern));
 }
 
 export function findAllKind(root: sg.SgRoot, kindName: string): MatchResult[] {
@@ -329,18 +329,10 @@ export function extractElements(lang: string, source: string, target: string): E
 
 // --- Helpers ---
 
-function nodeToMatch(node: sg.SgNode): MatchResult {
+function nodeToMatch(node: sg.SgNode, pattern?: string): MatchResult {
   const range = node.range();
-  const matches: Record<string, string> = {};
-
-  // Extract metavariables ($A, $NAME, etc.)
   const text = node.text();
-  const varPattern = /\$([A-Z_]+)/g;
-  let m;
-  while ((m = varPattern.exec(text)) !== null) {
-    // This won't work for finding actual metavariables in the pattern
-    // The pattern matcher handles this differently
-  }
+  const matches = pattern ? getMetavariables(node, pattern) : {};
 
   return {
     text,

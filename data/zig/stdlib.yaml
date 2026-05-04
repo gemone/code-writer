@@ -1,34 +1,137 @@
-# Zig Standard Library Reference
-# Minimal seed — use lang_fetch to populate comprehensive data
+# Zig Standard Library Reference (v0.16.0)
+# Comprehensive stdlib data
 
 version: "1"
 modules:
-  # ---------------------------------------------------------------------------
+  # =========================================================================
   # std.mem
-  # ---------------------------------------------------------------------------
+  # =========================================================================
   - module: std.mem
     type: std
-    description: Memory manipulation — comparing, copying, and searching slices.
+    description: Memory manipulation — comparing, copying, splitting, and searching slices.
     methods:
       - name: eql
         signature: "fn eql(comptime T: type, a: []const T, b: []const T) bool"
         description: Returns true if two slices have the same length and all elements are equal.
         returns: bool
         example: |
-          assert(std.mem.eql(u8, "hello", "hello"));
+          if (std.mem.eql(u8, "hello", "hello")) { ... }
         tags: [comparison, slices]
 
       - name: find
         signature: "fn find(comptime T: type, haystack: []const T, needle: []const T) ?usize"
-        description: Finds first occurrence of needle in haystack. Returns null if not found. (Renamed from indexOf in 0.16.)
+        description: Finds first occurrence of needle in haystack. Returns null if not found. Renamed from indexOf in 0.16.
         returns: "?usize"
         example: |
           const idx = std.mem.find(u8, "hello world", "world"); // idx == 6
         tags: [search, slices, "0.16"]
 
-  # ---------------------------------------------------------------------------
+      - name: startsWith
+        signature: "fn startsWith(comptime T: type, haystack: []const T, needle: []const T) bool"
+        description: Returns true if haystack starts with needle.
+        returns: bool
+        example: |
+          if (std.mem.startsWith(u8, path, "/")) { ... }
+        tags: [comparison, slices]
+
+      - name: endsWith
+        signature: "fn endsWith(comptime T: type, haystack: []const T, needle: []const T) bool"
+        description: Returns true if haystack ends with needle.
+        returns: bool
+        example: |
+          if (std.mem.endsWith(u8, file, ".zig")) { ... }
+        tags: [comparison, slices]
+
+      - name: splitSequence
+        signature: "fn splitSequence(comptime T: type, buffer: []const T, delimiter: []const T) SplitSequenceIterator(T)"
+        description: Returns an iterator over substrings separated by the delimiter.
+        returns: SplitSequenceIterator
+        example: |
+          var it = std.mem.splitSequence(u8, "a,b,c", ",");
+          while (it.next()) |part| { ... }
+        tags: [strings, iteration]
+
+      - name: splitAny
+        signature: "fn splitAny(comptime T: type, buffer: []const T, delimiters: []const T) SplitAnyIterator(T)"
+        description: Returns an iterator over substrings separated by any character in delimiters.
+        returns: SplitAnyIterator
+        example: |
+          var it = std.mem.splitAny(u8, "a,b;c", ",;");
+          while (it.next()) |part| { ... }
+        tags: [strings, iteration]
+
+      - name: tokenizeSequence
+        signature: "fn tokenizeSequence(comptime T: type, buffer: []const T, delimiter: []const T) TokenSequenceIterator(T)"
+        description: Returns an iterator over non-empty tokens separated by delimiter.
+        returns: TokenSequenceIterator
+        example: |
+          var it = std.mem.tokenizeSequence(u8, "  hello  world  ", " ");
+          // yields "hello", "world"
+        tags: [strings, iteration]
+
+      - name: replace
+        signature: "fn replace(comptime T: type, input: []const T, needle: []const T, replacement: []const T, output: []T) []T"
+        description: Replaces all occurrences of needle with replacement. Returns the written slice.
+        returns: "[]T"
+        example: |
+          var buf: [256]u8 = undefined;
+          const result = std.mem.replace(u8, "hello world", "world", "zig", &buf);
+        tags: [strings, manipulation]
+
+      - name: copy
+        signature: "fn copy(comptime T: type, dest: []T, source: []const T) void"
+        description: Copies elements from source to dest. Dest must be at least as long as source.
+        returns: void
+        example: |
+          var buf: [64]u8 = undefined;
+          std.mem.copy(u8, &buf, "hello");
+        tags: [memory, copy]
+
+      - name: set
+        signature: "fn set(comptime T: type, dest: []T, value: T) void"
+        description: Sets all elements of dest to value.
+        returns: void
+        example: |
+          var buf: [64]u8 = undefined;
+          std.mem.set(u8, &buf, 0);
+        tags: [memory]
+
+      - name: reverse
+        signature: "fn reverse(comptime T: type, items: []T) void"
+        description: Reverses a slice in place.
+        returns: void
+        example: |
+          var arr = [_]u32{ 1, 2, 3 };
+          std.mem.reverse(u32, &arr); // arr == { 3, 2, 1 }
+        tags: [slices, manipulation]
+
+      - name: sort
+        signature: "fn sort(comptime T: type, items: []T, context: anytype, comptime lessThanFn: fn(@TypeOf(context), T, T) bool) void"
+        description: Sorts a slice in place using the provided comparison function.
+        returns: void
+        example: |
+          std.mem.sort(u32, &items, {}, comptime std.sort.asc(u32));
+        tags: [sorting]
+
+      - name: toLower
+        signature: "fn toLower(comptime T: type, slice: []const T) [slice.len]T"
+        description: Returns a lowercase version of the slice. Only affects ASCII characters.
+        returns: "[slice.len]T"
+        example: |
+          const lower = std.mem.toLower("HELLO"); // "hello"
+        tags: [strings, case]
+
+      - name: toUpper
+        signature: "fn toUpper(comptime T: type, slice: []const T) [slice.len]T"
+        description: Returns an uppercase version of the slice. Only affects ASCII characters.
+        returns: "[slice.len]T"
+        example: |
+          const upper = std.mem.toUpper("hello"); // "HELLO"
+        tags: [strings, case]
+
+  # =========================================================================
   # std.fmt
-  # ---------------------------------------------------------------------------
+  # =========================================================================
   - module: std.fmt
     type: std
     description: String formatting, number parsing, and format string utilities.
@@ -42,34 +145,53 @@ modules:
           defer alloc.free(s); // s == "3.14"
         tags: [formatting, allocation]
 
+      - name: bufPrint
+        signature: "fn bufPrint(buf: []u8, comptime fmt: []const u8, args: anytype) ![]u8"
+        description: Prints a formatted string into a buffer. Returns the written slice.
+        returns: "![]u8"
+        example: |
+          var buf: [64]u8 = undefined;
+          const s = try std.fmt.bufPrint(&buf, "hello {s}", .{"world"});
+        tags: [formatting]
+
+      - name: bufPrintSentinel
+        signature: "fn bufPrintSentinel(buf: [:sentinel]u8, comptime fmt: []const u8, args: anytype) ![:sentinel]u8"
+        description: Prints formatted string into sentinel-terminated buffer. Replaces bufPrintZ.
+        returns: "![:sentinel]u8"
+        example: |
+          var buf: [64:0]u8 = undefined;
+          const s = try std.fmt.bufPrintSentinel(&buf, "hello {s}", .{"world"});
+        tags: [formatting, "0.16"]
+
       - name: parseInt
         signature: "fn parseInt(comptime T: type, buf: []const u8, base: u8) !T"
         description: Parses an integer from a string with the given base (2-36).
         returns: "!T"
         example: |
           const n = try std.fmt.parseInt(u32, "42", 10);
+          const hex = try std.fmt.parseInt(u32, "FF", 16);
         tags: [parsing, numbers]
 
-  # ---------------------------------------------------------------------------
-  # std.fs
-  # ---------------------------------------------------------------------------
-  - module: std.fs
-    type: std
-    description: Filesystem operations. In 0.16, use Io interface for I/O-aware operations.
-    methods:
-      - name: cwd
-        signature: "fn cwd() Dir"
-        description: Returns a handle to the current working directory.
-        returns: Dir
+      - name: parseFloat
+        signature: "fn parseFloat(comptime T: type, buf: []const u8) !T"
+        description: Parses a floating-point number from a string.
+        returns: "!T"
         example: |
-          const dir = std.fs.cwd();
-          const file = try dir.openFile("data.txt", .{});
-          defer file.close();
-        tags: [filesystem, directory]
+          const f = try std.fmt.parseFloat(f64, "3.14159");
+        tags: [parsing, numbers]
 
-  # ---------------------------------------------------------------------------
+      - name: format
+        signature: "fn format(out: anytype, comptime fmt: []const u8, args: anytype) !void"
+        description: Core formatting function. Writes formatted output to a writer. Replaced by std.Io.Writer.print in 0.16.
+        returns: "!void"
+        example: |
+          // In 0.16, prefer: writer.print("value: {d}\n", .{42});
+          try std.fmt.format(writer, "value: {d}\n", .{42});
+        tags: [formatting]
+
+  # =========================================================================
   # std.debug
-  # ---------------------------------------------------------------------------
+  # =========================================================================
   - module: std.debug
     type: std
     description: Debugging utilities — printing, assertions, and stack traces.
@@ -80,12 +202,619 @@ modules:
         returns: void
         example: |
           std.debug.print("value: {d}\n", .{42});
+          std.debug.print("string: {s}\n", .{"hello"});
         tags: [output, formatting]
 
       - name: assert
         signature: "fn assert(ok: bool) void"
-        description: Asserts a condition is true. Traps with stack trace in debug builds.
+        description: Asserts a condition is true. Traps with stack trace in debug builds. Removed in release builds.
         returns: void
         example: |
           std.debug.assert(x > 0);
+          std.debug.assert(list.items.len == expected);
         tags: [assertions, testing]
+
+      - name: panic
+        signature: "fn panic(comptime format: []const u8, args: anytype) noreturn"
+        description: Prints a panic message to stderr and aborts the program.
+        returns: noreturn
+        example: |
+          std.debug.panic("unexpected value: {d}", .{x});
+        tags: [errors, abort]
+
+  # =========================================================================
+  # std.Io
+  # =========================================================================
+  - module: std.Io
+    type: std
+    description: "I/O as an Interface (0.16+). All I/O operations require an Io instance. Provides Future, Group, Batch for concurrency."
+    methods:
+      - name: async
+        signature: "fn async(io: Io, comptime func: fn(..) T, args: anytype) Future(T)"
+        description: Creates a Future for a function call, expressing asynchrony. Infallible and portable.
+        returns: "Future(T)"
+        example: |
+          var task = io.async(readFile, .{ io, path });
+          defer _ = task.cancel(io) catch {};
+          const result = try task.await(io);
+        tags: [async, concurrency, "0.16"]
+
+      - name: sleep
+        signature: "fn sleep(io: Io, duration: Duration, timing: Timing) !void"
+        description: Sleeps for the given duration. Integrates with cancelation.
+        returns: "!void"
+        example: |
+          try io.sleep(std.Io.Duration.fromMilliseconds(1000), .awake);
+        tags: [timing, "0.16"]
+
+      - name: random
+        signature: "fn random(io: Io, buffer: []u8) void"
+        description: Fills buffer with random bytes. May use cached state. Replaces std.crypto.random.
+        returns: void
+        example: |
+          var buf: [32]u8 = undefined;
+          io.random(&buf);
+        tags: [random, entropy, "0.16"]
+
+      - name: cwd
+        signature: "fn cwd() Io.Dir"
+        description: Returns the current working directory as an Io.Dir.
+        returns: "Io.Dir"
+        example: |
+          const dir = std.Io.Dir.cwd();
+          const file = try dir.openFile(io, "data.txt", .{});
+        tags: [filesystem, "0.16"]
+
+  # =========================================================================
+  # std.process
+  # =========================================================================
+  - module: std.process
+    type: std
+    description: "Process lifecycle, arguments, environment, and child process management. In 0.16, Init provides Juicy Main."
+    methods:
+      - name: Init
+        signature: "pub const Init = struct { gpa: Allocator, arena: ArenaAllocator, io: Io, ... }"
+        description: "Juicy Main parameter type providing GPA allocator, arena, Io instance, args, and env map."
+        returns: Init
+        example: |
+          pub fn main(init: std.process.Init) !void {
+              const gpa = init.gpa;
+              const io = init.io;
+              const alloc = init.arena.allocator();
+              const args = try init.minimal.args.toSlice(alloc);
+          }
+        tags: [entry-point, "0.16"]
+
+      - name: spawn
+        signature: "fn spawn(io: Io, options: struct { argv, stdin, stdout, stderr }) !Child"
+        description: Spawns a child process. Replaces std.process.Child.init in 0.16.
+        returns: "!Child"
+        example: |
+          var child = try std.process.spawn(io, .{
+              .argv = &.{ "ls", "-la" },
+              .stdout = .pipe,
+          });
+        tags: [process, "0.16"]
+
+      - name: run
+        signature: "fn run(allocator: Allocator, io: Io, options: struct { argv, stdin, stdout, stderr }) !Result"
+        description: Runs a child process and captures its output. Replaces std.process.Child.run.
+        returns: "!Result"
+        example: |
+          const result = try std.process.run(alloc, io, .{
+              .argv = &.{ "git", "status" },
+              .stdout = .capture,
+          });
+          std.debug.print("{s}\n", .{result.stdout});
+        tags: [process, "0.16"]
+
+  # =========================================================================
+  # std.ArrayList
+  # =========================================================================
+  - module: std.ArrayList
+    type: std
+    description: Dynamic array that grows as needed. Generic via comptime type parameter. Managed variant takes allocator.
+    methods:
+      - name: init
+        signature: "fn init(allocator: Allocator) ArrayList(T)"
+        description: Creates an empty ArrayList with the given allocator.
+        returns: "ArrayList(T)"
+        example: |
+          var list = std.ArrayList(u8).init(gpa);
+          defer list.deinit(gpa);
+        tags: [collections, allocation]
+
+      - name: append
+        signature: "fn append(self: *ArrayList(T), allocator: Allocator, item: T) !void"
+        description: Appends an item to the list. May reallocate.
+        returns: "!void"
+        example: |
+          try list.append(gpa, 42);
+        tags: [collections]
+
+      - name: appendSlice
+        signature: "fn appendSlice(self: *ArrayList(T), allocator: Allocator, items: []const T) !void"
+        description: Appends all items from a slice.
+        returns: "!void"
+        example: |
+          try list.appendSlice(gpa, "hello");
+        tags: [collections]
+
+      - name: insert
+        signature: "fn insert(self: *ArrayList(T), allocator: Allocator, n: usize, item: T) !void"
+        description: Inserts an item at index n, shifting elements.
+        returns: "!void"
+        example: |
+          try list.insert(gpa, 0, 42);
+        tags: [collections]
+
+      - name: orderedRemove
+        signature: "fn orderedRemove(self: *ArrayList(T), n: usize) T"
+        description: Removes item at index n, preserving order. Returns removed item.
+        returns: T
+        example: |
+          const item = list.orderedRemove(0);
+        tags: [collections]
+
+      - name: swapRemove
+        signature: "fn swapRemove(self: *ArrayList(T), n: usize) T"
+        description: Removes item at index n by swapping with last element. O(1). Returns removed item.
+        returns: T
+        example: |
+          const item = list.swapRemove(0);
+        tags: [collections]
+
+      - name: deinit
+        signature: "fn deinit(self: *ArrayList(T), allocator: Allocator) void"
+        description: Frees all memory. Must be called when done.
+        returns: void
+        example: |
+          defer list.deinit(gpa);
+        tags: [collections, memory]
+
+      - name: toOwnedSlice
+        signature: "fn toOwnedSlice(self: *ArrayList(T), allocator: Allocator) ![]T"
+        description: Returns the owned slice and resets the list. Caller owns the memory.
+        returns: "![]T"
+        example: |
+          const slice = try list.toOwnedSlice(gpa);
+          defer gpa.free(slice);
+        tags: [collections, memory]
+
+  # =========================================================================
+  # std.StringHashMap / std.AutoHashMap
+  # =========================================================================
+  - module: std.StringHashMap
+    type: std
+    description: Hash map with string keys. Uses std.hash_map for implementation.
+    methods:
+      - name: init
+        signature: "fn init(allocator: Allocator) StringHashMap(V)"
+        description: Creates an empty StringHashMap.
+        returns: "StringHashMap(V)"
+        example: |
+          var map = std.StringHashMap(u32).init(gpa);
+          defer map.deinit(gpa);
+        tags: [collections, maps]
+
+      - name: get
+        signature: "fn get(self: StringHashMap(V), key: []const u8) ?V"
+        description: Returns the value for key, or null if not present.
+        returns: "?V"
+        example: |
+          if (map.get("name")) |val| { ... }
+        tags: [collections, maps]
+
+      - name: getOrPut
+        signature: "fn getOrPut(self: *StringHashMap(V), allocator: Allocator, key: []const u8) !GetOrPutResult"
+        description: Returns entry for key, inserting if absent. Use for upsert patterns.
+        returns: "!GetOrPutResult"
+        example: |
+          const gop = try map.getOrPut(gpa, "count");
+          if (!gop.found_existing) gop.value_ptr.* = 0;
+          gop.value_ptr.* += 1;
+        tags: [collections, maps]
+
+      - name: put
+        signature: "fn put(self: *StringHashMap(V), allocator: Allocator, key: []const u8, value: V) !void"
+        description: Inserts or replaces a key-value pair.
+        returns: "!void"
+        example: |
+          try map.put(gpa, "name", 42);
+        tags: [collections, maps]
+
+      - name: remove
+        signature: "fn remove(self: *StringHashMap(V), key: []const u8) bool"
+        description: Removes key. Returns true if key existed.
+        returns: bool
+        example: |
+          if (map.remove("name")) { ... }
+        tags: [collections, maps]
+
+      - name: deinit
+        signature: "fn deinit(self: *StringHashMap(V), allocator: Allocator) void"
+        description: Frees all memory.
+        returns: void
+        example: |
+          defer map.deinit(gpa);
+        tags: [collections, memory]
+
+  # =========================================================================
+  # std.json
+  # =========================================================================
+  - module: std.json
+    type: std
+    description: JSON parsing and serialization. Supports struct serialization/deserialization.
+    methods:
+      - name: parseFromSlice
+        signature: "fn parseFromSlice(comptime T: type, allocator: Allocator, slice: []const u8, options: ParseOptions) !ParseResult(T)"
+        description: Parses JSON from a byte slice into a Zig type. Returns owned result.
+        returns: "!ParseResult(T)"
+        example: |
+          const Config = struct { host: []const u8, port: u16 };
+          const result = try std.json.parseFromSlice(Config, alloc, json_bytes, .{});
+          defer result.deinit(alloc);
+          std.debug.print("{s}:{d}\n", .{result.value.host, result.value.port});
+        tags: [json, parsing]
+
+      - name: parseFromSliceLeaky
+        signature: "fn parseFromSliceLeaky(comptime T: type, allocator: Allocator, slice: []const u8, options: ParseOptions) !T"
+        description: Parses JSON without tracking allocations. Use with arena allocator.
+        returns: "!T"
+        example: |
+          const config = try std.json.parseFromSliceLeaky(Config, arena, json_bytes, .{});
+        tags: [json, parsing]
+
+      - name: stringify
+        signature: "fn stringify(value: anytype, options: StringifyOptions, out: anytype) !void"
+        description: Serializes a Zig value as JSON to a writer.
+        returns: "!void"
+        example: |
+          var buf = std.ArrayList(u8).init(gpa);
+          defer buf.deinit(gpa);
+          try std.json.stringify(config, .{}, buf.writer(gpa));
+        tags: [json, serialization]
+
+      - name: Value
+        signature: "const Value = union(enum) { null, bool, integer: i64, float: f64, string: []const u8, array: List, object: Map }"
+        description: Dynamic JSON value type. Use for unstructured JSON data.
+        returns: Value
+        example: |
+          const doc = try std.json.parseFromSlice(std.json.Value, alloc, data, .{});
+          defer doc.deinit(alloc);
+          if (doc.value.object.get("name")) |name| { ... }
+        tags: [json, dynamic]
+
+  # =========================================================================
+  # std.heap
+  # =========================================================================
+  - module: std.heap
+    type: std
+    description: Memory allocators. All allocation in Zig is explicit via Allocator parameter.
+    methods:
+      - name: GeneralPurposeAllocator
+        signature: "fn GeneralPurposeAllocator(comptime config: Config) type"
+        description: General-purpose allocator with safety features. Detects leaks and double-frees in debug builds. Thread-safe in 0.16.
+        returns: type
+        example: |
+          var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
+          defer gpa.deinit();
+          const allocator = gpa.allocator();
+        tags: [memory, allocator]
+
+      - name: ArenaAllocator
+        signature: "fn ArenaAllocator.init(child_allocator: Allocator) ArenaAllocator"
+        description: All allocations freed at once on deinit. Thread-safe and lock-free in 0.16.
+        returns: ArenaAllocator
+        example: |
+          var arena = std.heap.ArenaAllocator.init(gpa);
+          defer arena.deinit();
+          const alloc = arena.allocator();
+        tags: [memory, allocator, "0.16"]
+
+      - name: page_allocator
+        signature: "const page_allocator: Allocator"
+        description: Allocates whole pages from the OS. No metadata overhead. Not for general use.
+        returns: Allocator
+        example: |
+          const buf = try std.heap.page_allocator.alloc(u8, 4096);
+        tags: [memory, allocator]
+
+  # =========================================================================
+  # std.testing
+  # =========================================================================
+  - module: std.testing
+    type: std
+    description: Testing utilities including leak-detecting allocator and I/O instance.
+    methods:
+      - name: expect
+        signature: "fn expect(condition: bool) !void"
+        description: Asserts a condition is true. Returns error on failure.
+        returns: "!void"
+        example: |
+          try std.testing.expect(result == 42);
+        tags: [testing]
+
+      - name: expectEqual
+        signature: "fn expectEqual(expected: anytype, actual: anytype) !void"
+        description: Asserts two values are equal. Provides detailed diff on failure.
+        returns: "!void"
+        example: |
+          try std.testing.expectEqual(@as(u32, 42), result);
+        tags: [testing]
+
+      - name: expectError
+        signature: "fn expectError(expected: anyerror, actual: anytype) !void"
+        description: Asserts an error union contains the expected error.
+        returns: "!void"
+        example: |
+          try std.testing.expectError(error.Overflow, parseInt(u8, "256", 10));
+        tags: [testing, errors]
+
+      - name: allocator
+        signature: "const allocator: Allocator"
+        description: Allocator that detects memory leaks in tests. Automatically checks on test completion.
+        returns: Allocator
+        example: |
+          const buf = try std.testing.allocator.alloc(u8, 100);
+          defer std.testing.allocator.free(buf);
+        tags: [testing, memory]
+
+      - name: io
+        signature: "const io: std.Io"
+        description: I/O instance for testing. Use instead of std.process.Init.io in tests.
+        returns: "std.Io"
+        example: |
+          test "file read" {
+              const io = std.testing.io;
+              const file = try io.cwd().openFile("testdata.txt", .{});
+              defer file.close(io);
+          }
+        tags: [testing, io, "0.16"]
+
+  # =========================================================================
+  # std.log
+  # =========================================================================
+  - module: std.log
+    type: std
+    description: Logging system with configurable log levels and custom log functions.
+    methods:
+      - name: info
+        signature: "fn info(comptime format: []const u8, args: anytype) void"
+        description: Logs at info level. Disabled in ReleaseSmall builds.
+        returns: void
+        example: |
+          std.log.info("connected to {s}:{d}", .{ host, port });
+        tags: [logging]
+
+      - name: warn
+        signature: "fn warn(comptime format: []const u8, args: anytype) void"
+        description: Logs at warn level.
+        returns: void
+        example: |
+          std.log.warn("retrying in {d}ms", .{delay_ms});
+        tags: [logging]
+
+      - name: err
+        signature: "fn err(comptime format: []const u8, args: anytype) void"
+        description: Logs at error level.
+        returns: void
+        example: |
+          std.log.err("failed to connect: {}", .{err});
+        tags: [logging]
+
+      - name: debug
+        signature: "fn debug(comptime format: []const u8, args: anytype) void"
+        description: Logs at debug level. Disabled in ReleaseSafe and ReleaseSmall builds.
+        returns: void
+        example: |
+          std.log.debug("value: {d}", .{x});
+        tags: [logging]
+
+  # =========================================================================
+  # std.sort
+  # =========================================================================
+  - module: std.sort
+    type: std
+    description: Sorting algorithms.
+    methods:
+      - name: asc
+        signature: "fn asc(comptime T: type) fn(void, T, T) bool"
+        description: Returns an ascending comparison function for type T.
+        returns: "fn(void, T, T) bool"
+        example: |
+          std.mem.sort(u32, &items, {}, comptime std.sort.asc(u32));
+        tags: [sorting]
+
+      - name: desc
+        signature: "fn desc(comptime T: type) fn(void, T, T) bool"
+        description: Returns a descending comparison function for type T.
+        returns: "fn(void, T, T) bool"
+        example: |
+          std.mem.sort(u32, &items, {}, comptime std.sort.desc(u32));
+        tags: [sorting]
+
+      - name: block
+        signature: "fn block(comptime T: type, items: []T, context: anytype, comptime lessThan: fn(..) bool) void"
+        description: In-place block sort. O(n log n) worst case, stable.
+        returns: void
+        example: |
+          std.sort.block(u32, &items, {}, comptime std.sort.asc(u32));
+        tags: [sorting]
+
+  # =========================================================================
+  # std.crypto
+  # =========================================================================
+  - module: std.crypto
+    type: std
+    description: Cryptographic primitives — hashes, MACs, AEADs, and random number generation.
+    methods:
+      - name: sha256
+        signature: "const sha256 = Sha256"
+        description: SHA-256 hash function.
+        returns: Sha256
+        example: |
+          var h: [32]u8 = undefined;
+          std.crypto.hash.sha256.hash("hello", &h, .{});
+        tags: [crypto, hash]
+
+      - name: sha512
+        signature: "const sha512 = Sha512"
+        description: SHA-512 hash function.
+        returns: Sha512
+        example: |
+          var h: [64]u8 = undefined;
+          std.crypto.hash.sha512.hash("hello", &h, .{});
+        tags: [crypto, hash]
+
+      - name: aes_siv
+        signature: "const AesSiv = struct { ... }"
+        description: AES-SIV authenticated encryption. New in 0.16.
+        returns: AesSiv
+        example: |
+          const key = [_]u8{0x**}; // 256 or 512-bit key
+          var siv: std.crypto.aead.aes_siv.Aes256Siv = .{ .key = key };
+        tags: [crypto, encryption, "0.16"]
+
+  # =========================================================================
+  # std.compress
+  # =========================================================================
+  - module: std.compress
+    type: std
+    description: Compression and decompression (deflate, gzip, zlib, lzma, xz, zstd).
+    methods:
+      - name: deflate
+        signature: "const deflate = struct { Compress, Raw, Huffman }"
+        description: Deflate compression. New in 0.16. Includes Compress, Raw (store-only), and Huffman variants.
+        returns: deflate
+        example: |
+          var compressor = try std.compress.deflate.compressor(gpa, writer, .{});
+          try compressor.write(gpa, data);
+          try compressor.finish(gpa);
+        tags: [compression, "0.16"]
+
+      - name: gzip
+        signature: "const gzip = struct { decompress, compress }"
+        description: GZIP compression and decompression.
+        returns: gzip
+        example: |
+          var stream = try std.compress.gzip.decompress(gpa, reader);
+        tags: [compression]
+
+      - name: zstd
+        signature: "const zstd = struct { decompress, compress }"
+        description: Zstandard compression and decompression.
+        returns: zstd
+        example: |
+          var stream = try std.compress.zstd.decompress(gpa, reader);
+        tags: [compression]
+
+  # =========================================================================
+  # std.Thread
+  # =========================================================================
+  - module: std.Thread
+    type: std
+    description: Thread creation and management. Sync primitives migrated to std.Io in 0.16.
+    methods:
+      - name: spawn
+        signature: "fn spawn(config: SpawnConfig, comptime f: fn(..) void, args: anytype) !Thread"
+        description: Spawns a new thread executing function f with args.
+        returns: "!Thread"
+        example: |
+          const thread = try std.Thread.spawn(.{}, workerFn, .{&data});
+          thread.join();
+        tags: [concurrency, threads]
+
+      - name: Futex
+        signature: "const Futex = ..."
+        description: "Fast userspace mutex. Migrated to std.Io.Futex in 0.16."
+        returns: Futex
+        example: |
+          var futex: std.Thread.Futex = .{};
+        tags: [concurrency, sync]
+
+  # =========================================================================
+  # std.math
+  # =========================================================================
+  - module: std.math
+    type: std
+    description: Mathematical functions and constants.
+    methods:
+      - name: max
+        signature: "fn max(comptime T: type, a: T, b: T) T"
+        description: Returns the larger of two values.
+        returns: T
+        example: |
+          const m = std.math.max(u32, a, b);
+        tags: [math]
+
+      - name: min
+        signature: "fn min(comptime T: type, a: T, b: T) T"
+        description: Returns the smaller of two values.
+        returns: T
+        example: |
+          const m = std.math.min(u32, a, b);
+        tags: [math]
+
+      - name: abs
+        signature: "fn abs(x: anytype) @TypeOf(x)"
+        description: Returns the absolute value.
+        returns: "@TypeOf(x)"
+        example: |
+          const v = std.math.abs(-42);
+        tags: [math]
+
+      - name: clz
+        signature: "fn clz(x: anytype) std.meta.Int(.unsigned, @bitSizeOf(@TypeOf(x)))"
+        description: Counts leading zero bits.
+        returns: int
+        example: |
+          const n = std.math.clz(@as(u32, 0x00010000));
+        tags: [math, bitwise]
+
+      - name: divTrunc
+        signature: "fn divTrunc(comptime T: type, numerator: T, denominator: T) !T"
+        description: Division truncated toward zero. Returns error on division by zero or overflow.
+        returns: "!T"
+        example: |
+          const q = try std.math.divTrunc(i32, -7, 2); // -3
+        tags: [math]
+
+      - name: divFloor
+        signature: "fn divFloor(comptime T: type, numerator: T, denominator: T) !T"
+        description: Division floored toward negative infinity.
+        returns: "!T"
+        example: |
+          const q = try std.math.divFloor(i32, -7, 2); // -4
+        tags: [math]
+
+  # =========================================================================
+  # std.meta
+  # =========================================================================
+  - module: std.meta
+    type: std
+    description: Metaprogramming utilities — type introspection, field access, and trait checking.
+    methods:
+      - name: fieldNames
+        signature: "fn fieldNames(comptime T: type) [*:null][]const u8"
+        description: Returns comptime array of field names for structs, unions, enums.
+        returns: "[*:null][]const u8"
+        example: |
+          const names = std.meta.fieldNames(MyStruct);
+        tags: [metaprogramming, comptime]
+
+      - name: Tag
+        signature: "fn Tag(comptime T: type) type"
+        description: Returns the tag type of a tagged union or enum.
+        returns: type
+        example: |
+          const MyTag = std.meta.Tag(MyUnion);
+        tags: [metaprogramming, types]
+
+      - name: Float
+        signature: "fn Float(comptime bits: comptime_int) type"
+        description: Returns the float type with the given bit count (16, 32, 64, 80, 128).
+        returns: type
+        example: |
+          const F = std.meta.Float(32); // f32
+        tags: [metaprogramming, types]
