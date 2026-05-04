@@ -2,13 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseManager } from '../engine/database.js';
 import { extractImports, isSupported } from '../engine/ast.js';
-
-const EXT_TO_LANG: Record<string, string> = {
-  '.ts': 'typescript', '.tsx': 'typescript', '.mts': 'typescript', '.cts': 'typescript',
-  '.js': 'javascript', '.jsx': 'javascript', '.mjs': 'javascript',
-  '.py': 'python', '.pyi': 'python', '.pyw': 'python',
-  '.rs': 'rust', '.go': 'go', '.java': 'java', '.rb': 'ruby',
-};
+import { EXT_TO_LANG } from '../shared/lang-map.js';
 
 const MODULE_ALIASES: Record<string, Record<string, string>> = {
   typescript: {

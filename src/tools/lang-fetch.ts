@@ -9,7 +9,7 @@ const TEMPLATE_FILES = ['language.yaml', 'stdlib.yaml', 'syntax.yaml', 'conventi
 export function createLangFetchTool(queryEngine: QueryEngine, loader: LanguageLoader) {
   return {
     name: 'lang_fetch' as const,
-    description: 'Fetch and register standard library data for a programming language. Phase 1: scaffolds directory and returns instructions. Phase 2: accepts populated data and syncs to database.',
+    description: 'Fetch and register language data for a programming language. This is the standard way to add language data. Use Context7 or WebSearch to fetch comprehensive stdlib/syntax/patterns data and store it in YAML format. Phase 1: scaffolds directory and returns instructions. Phase 2: accepts populated data and syncs to database.',
     inputSchema: {
       type: 'object' as const,
       properties: {

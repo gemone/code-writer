@@ -305,14 +305,15 @@ export type Pattern = z.infer<typeof PatternSchema>;
 
 // Normalize pattern from different YAML formats
 function normalizePattern(raw: Record<string, unknown>): Record<string, unknown> {
-  const whenRaw = raw.when || raw.whenToUse;
+  const whenRaw = raw.when || raw.whenToUse || raw.when_to_use;
   const when = Array.isArray(whenRaw) ? whenRaw.join('\n') : whenRaw;
   const exampleRaw = raw.example;
   const example = Array.isArray(exampleRaw) ? exampleRaw.join('\n') : typeof exampleRaw === 'string' ? exampleRaw : undefined;
+  const description = raw.description || raw.intent || '';
   return {
     name: raw.name,
     category: raw.category,
-    description: raw.description,
+    description,
     when,
     example,
     relatedPatterns: raw.relatedPatterns,

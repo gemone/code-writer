@@ -1,13 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { lintCode, isSupported, type AstRule } from '../engine/ast.js';
-
-const EXT_TO_LANG: Record<string, string> = {
-  '.ts': 'typescript', '.tsx': 'typescript', '.mts': 'typescript', '.cts': 'typescript',
-  '.js': 'javascript', '.jsx': 'javascript', '.mjs': 'javascript',
-  '.py': 'python', '.pyi': 'python', '.pyw': 'python',
-  '.rs': 'rust', '.go': 'go', '.java': 'java', '.rb': 'ruby',
-};
+import { lintCode, parseCode, isSupported, type AstRule } from '../engine/ast.js';
+import { EXT_TO_LANG } from '../shared/lang-map.js';
 
 interface HookInput {
   tool_name?: string;
@@ -54,7 +48,6 @@ try {
 
   // For Python, also check bare except clauses via kind matching
   if (lang === 'python') {
-    const { parseCode } = require('../engine/ast.js');
     const root = parseCode(lang, content);
     const exceptClauses = root.root().findAll({ rule: { kind: 'except_clause' } }) || [];
     for (const clause of exceptClauses) {
