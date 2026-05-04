@@ -7,7 +7,7 @@ export const EXT_TO_LANG: Record<string, string> = {
   // Python
   '.py': 'python', '.pyi': 'python', '.pyw': 'python',
   // Systems
-  '.rs': 'rust', '.go': 'go', '.zig': 'zig', '.c': 'c', '.cpp': 'cpp',
+  '.rs': 'rust', '.go': 'go', '.zig': 'zig', '.zon': 'zig', '.c': 'c', '.cpp': 'cpp',
   '.h': 'c', '.hpp': 'cpp', '.cc': 'cpp', '.cxx': 'cpp',
   // JVM
   '.java': 'java', '.kt': 'kotlin', '.kts': 'kotlin', '.scala': 'scala',

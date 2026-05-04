@@ -1,23 +1,8 @@
 import type { Plugin } from "@opencode-ai/plugin"
-import { readFileSync, existsSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { extname, basename } from "node:path"
 import { EXT_TO_LANG } from "../../src/shared/lang-map.js"
-
-const MODULE_ALIASES: Record<string, Record<string, string>> = {
-  typescript: {
-    'node:fs': 'fs', 'node:path': 'path', 'node:os': 'os',
-    'node:crypto': 'crypto', 'node:http': 'http', 'node:url': 'url',
-    'fs': 'fs', 'path': 'path', 'os': 'os', 'crypto': 'crypto',
-    'http': 'http', 'url': 'url', 'events': 'events', 'stream': 'stream',
-    'child_process': 'child_process', 'util': 'util', 'buffer': 'buffer',
-  },
-  python: {
-    'os.path': 'os', 'os': 'os', 'sys': 'sys', 'json': 'json',
-    're': 're', 'pathlib': 'pathlib', 'datetime': 'datetime',
-    'collections': 'collections', 'itertools': 'itertools',
-    'functools': 'functools', 'typing': 'typing', 'abc': 'abc',
-  },
-}
+import { MODULE_ALIASES } from "../../src/shared/module-aliases.js"
 
 const IMPORT_PATTERNS = [
   /import\s+(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g,
@@ -48,8 +33,12 @@ const CodeStandardsHooks: Plugin = async () => {
       if (!lang) return
 
       // Read file content
-      if (!existsSync(filePath)) return
-      const content = readFileSync(filePath, 'utf-8')
+      let content: string
+      try {
+        content = readFileSync(filePath, 'utf-8')
+      } catch {
+        return
+      }
 
       // Strip comments
       const stripped = content

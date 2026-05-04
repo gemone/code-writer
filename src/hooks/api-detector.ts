@@ -3,23 +3,7 @@ import path from 'node:path';
 import { DatabaseManager } from '../engine/database.js';
 import { extractImports, isSupported } from '../engine/ast.js';
 import { EXT_TO_LANG } from '../shared/lang-map.js';
-
-const MODULE_ALIASES: Record<string, Record<string, string>> = {
-  typescript: {
-    'node:fs': 'node:fs/promises', 'node:fs/promises': 'node:fs/promises',
-    'node:path': 'node:path', 'node:os': 'os',
-    'node:crypto': 'crypto', 'node:http': 'http', 'node:url': 'url',
-    'fs': 'node:fs/promises', 'path': 'node:path', 'os': 'os', 'crypto': 'crypto',
-    'http': 'http', 'url': 'url', 'events': 'events', 'stream': 'stream',
-    'child_process': 'child_process', 'util': 'util', 'buffer': 'buffer',
-  },
-  python: {
-    'os.path': 'os', 'os': 'os', 'sys': 'sys', 'json': 'json',
-    're': 're', 'pathlib': 'pathlib', 'datetime': 'datetime',
-    'collections': 'collections', 'itertools': 'itertools',
-    'functools': 'functools', 'typing': 'typing', 'abc': 'abc',
-  },
-};
+import { MODULE_ALIASES } from '../shared/module-aliases.js';
 
 interface HookInput {
   tool_name?: string;

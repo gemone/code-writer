@@ -309,7 +309,7 @@ function normalizePattern(raw: Record<string, unknown>): Record<string, unknown>
   const when = Array.isArray(whenRaw) ? whenRaw.join('\n') : whenRaw;
   const exampleRaw = raw.example;
   const example = Array.isArray(exampleRaw) ? exampleRaw.join('\n') : typeof exampleRaw === 'string' ? exampleRaw : undefined;
-  const description = raw.description || raw.intent || '';
+  const description = raw.description || raw.intent;
   return {
     name: raw.name,
     category: raw.category,
