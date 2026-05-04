@@ -1,5 +1,5 @@
 {
-  "name": "@gemone/code-standards",
+  "name": "@gemone/code-writer",
   "version": "0.1.0",
   "description": "Coding standard library and syntax reference for Claude Code and OpenCode",
   "type": "module",

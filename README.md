@@ -1,4 +1,4 @@
-# @gemone/code-standards
+# @gemone/code-writer
 
 Language-aware coding assistant plugin for **Claude Code** and **OpenCode** via MCP.
 
@@ -43,7 +43,7 @@ npm install && npm run build
 # .mcp.json
 {
   "mcpServers": {
-    "code-standards": {
+    "code-writer": {
       "command": "node",
       "args": ["/absolute/path/to/code-writer/dist/mcp/server.cjs"]
     }
@@ -94,13 +94,13 @@ npm install && npm run build
 # opencode.json
 {
   "mcp": {
-    "code-standards": {
+    "code-writer": {
       "type": "local",
       "command": ["node", "/absolute/path/to/code-writer/dist/mcp/server.cjs"],
       "enabled": true
     }
   },
-  "plugin": ["/absolute/path/to/code-writer/.opencode/plugins/code-standards-hooks.ts"]
+  "plugin": ["/absolute/path/to/code-writer/.opencode/plugins/code-writer-hooks.ts"]
 }
 
 # 3. Restart OpenCode, then verify

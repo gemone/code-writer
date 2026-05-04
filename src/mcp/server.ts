@@ -30,7 +30,7 @@ async function main() {
   const tools = [langRefTool, langSearchTool, langConventionsTool, langCompareTool, langFetchTool, langAstTool];
 
   const server = new Server(
-    { name: 'code-standards', version: '0.1.0' },
+    { name: 'code-writer', version: '0.1.0' },
     { capabilities: { tools: {} } }
   );
 

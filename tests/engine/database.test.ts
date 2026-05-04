@@ -10,7 +10,7 @@ describe('DatabaseManager', () => {
   let dbPath: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'code-standards-test-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'code-writer-test-'));
     dbPath = path.join(tmpDir, 'test.db');
     db = new DatabaseManager(dbPath);
   });

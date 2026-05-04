@@ -11,8 +11,8 @@ interface HookInput {
 
 function updateClaudeMd(projectPath: string, languages: string[]): void {
   const claudeMdPath = path.join(projectPath, 'CLAUDE.md');
-  const marker = '<!-- code-standards: project-languages -->';
-  const endMarker = '<!-- /code-standards: project-languages -->';
+  const marker = '<!-- code-writer: project-languages -->';
+  const endMarker = '<!-- /code-writer: project-languages -->';
 
   const langList = languages.join(', ');
   const block = `${marker}\n## Project Languages\n${langList}\n${endMarker}`;

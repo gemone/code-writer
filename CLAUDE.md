@@ -68,7 +68,7 @@ scripts/              # Build, validation, scaffolding scripts
 tests/                # Vitest test suite
 ```
 
-<!-- code-standards: project-languages -->
+<!-- code-writer: project-languages -->
 ## Project Languages
 typescript
-<!-- /code-standards: project-languages -->
+<!-- /code-writer: project-languages -->

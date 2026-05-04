@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const DEFAULT_DB_DIR = path.join(
   process.env.HOME || process.env.USERPROFILE || '.',
-  '.code-standards'
+  '.code-writer'
 );
 
 export class DatabaseManager {

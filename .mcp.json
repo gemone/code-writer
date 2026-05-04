@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "code-standards": {
+    "code-writer": {
       "command": "node",
       "args": ["dist/mcp/server.cjs"]
     }

@@ -1,14 +1,14 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "code-standards": {
+    "code-writer": {
       "type": "local",
       "command": ["node", "dist/mcp/server.cjs"],
       "enabled": true
     }
   },
   "plugin": [
-    "./.opencode/plugins/code-standards-hooks.ts"
+    "./.opencode/plugins/code-writer-hooks.ts"
   ],
-  "instructions": "Use the code-standards MCP tools for language-aware coding:\n- `lang_ref` for stdlib API lookup\n- `lang_search` for patterns and idioms\n- `lang_conventions` for coding style rules\n- `lang_compare` for cross-language comparison\n- `lang_fetch` to add new language support\n\nWhen writing code, always check conventions first. Use LSP validation after writing."
+  "instructions": "Use the code-writer MCP tools for language-aware coding:\n- `lang_ref` for stdlib API lookup\n- `lang_search` for patterns and idioms\n- `lang_conventions` for coding style rules\n- `lang_compare` for cross-language comparison\n- `lang_fetch` to add new language support\n\nWhen writing code, always check conventions first. Use LSP validation after writing."
 }
