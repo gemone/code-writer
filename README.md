@@ -1,6 +1,6 @@
 # @gemone/code-writer
 
-Language-aware coding assistant plugin for **Claude Code** and **OpenCode** via MCP.
+Language-aware coding assistant plugin for **Claude Code** and **OpenCode**.
 
 Provides structured, queryable access to programming language stdlib APIs, syntax references, coding conventions, and design patterns. Ships with minimal seed data — comprehensive language documentation is auto-fetched on demand via `lang_fetch`. Local stdlib files are auto-indexed on first use with semantic (vector) search powered by Orama.
 
@@ -29,59 +29,28 @@ Provides structured, queryable access to programming language stdlib APIs, synta
 
 ### Prerequisites
 
-- Node.js >= 18
+- Node.js >= 20
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [OpenCode](https://opencode.ai)
 
-### Claude Code
+### Claude Code (Plugin)
 
 ```bash
-# 1. Clone and build
-git clone https://github.com/gemone/code-writer.git
-cd code-writer
-npm install && npm run build
+# Add the gemone marketplace (if not already added)
+/plugin marketplace add gemone/code-writer
 
-# 2. Add MCP server to your project's .mcp.json (or global ~/.claude/.mcp.json)
-# .mcp.json
-{
-  "mcpServers": {
-    "code-writer": {
-      "command": "node",
-      "args": ["/absolute/path/to/code-writer/dist/mcp/server.cjs"]
-    }
-  }
-}
-
-# 3. Add hooks to .claude/settings.json (project or global)
-# .claude/settings.json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "matcher": "*",
-        "hooks": [{ "type": "command", "command": "node /absolute/path/to/code-writer/dist/hooks/language-detector.cjs", "timeout": 3000 }]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [{ "type": "command", "command": "node /absolute/path/to/code-writer/dist/hooks/api-detector.cjs", "timeout": 5000 }]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [{ "type": "command", "command": "node /absolute/path/to/code-writer/dist/hooks/conventions-lint.cjs", "timeout": 5000 }]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [{ "type": "command", "command": "node /absolute/path/to/code-writer/dist/hooks/project-memory.cjs", "timeout": 2000 }]
-      }
-    ]
-  }
-}
-
-# 4. Restart Claude Code, then verify
-# > lang_search("map")
-# > lang_conventions(language: "typescript")
+# Install the plugin
+/plugin install code-writer@gemone
 ```
+
+Hooks and MCP tools are registered automatically — no manual configuration needed. Run `/reload-plugins` to activate without restarting.
+
+**Updating:**
+
+```
+/plugin update code-writer@gemone
+```
+
+Or enable auto-update in `/plugin` → Marketplaces tab, then updates are applied on startup.
 
 ### OpenCode
 
@@ -92,7 +61,6 @@ cd code-writer
 npm install && npm run build
 
 # 2. Add to opencode.json in your project root
-# opencode.json
 {
   "mcp": {
     "code-writer": {
@@ -104,9 +72,7 @@ npm install && npm run build
   "plugin": ["/absolute/path/to/code-writer/.opencode/plugins/code-writer-hooks.ts"]
 }
 
-# 3. Restart OpenCode, then verify
-# > lang_search("map")
-# > lang_conventions(language: "typescript")
+# 3. Restart OpenCode
 ```
 
 ## Supported Languages
