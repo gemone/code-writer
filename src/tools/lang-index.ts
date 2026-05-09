@@ -1,12 +1,14 @@
 import type { LanguageLoader } from '../engine/loader.js';
 import type { VectorStore } from '../engine/vector-store.js';
 import type { EmbeddingProvider } from '../engine/embedding.js';
+import type { DatabaseManager } from '../engine/database.js';
 import { indexLanguage } from '../engine/indexer.js';
 
 export function createLangIndexTool(
   loader: LanguageLoader,
   vectorStore: VectorStore,
   embedding: EmbeddingProvider,
+  db: DatabaseManager,
 ) {
   return {
     name: 'lang_index' as const,
@@ -47,7 +49,7 @@ export function createLangIndexTool(
         };
       }
 
-      const result = await indexLanguage(lang, loader, vectorStore, embedding);
+      const result = await indexLanguage(lang, loader, vectorStore, embedding, db);
 
       return {
         content: [{

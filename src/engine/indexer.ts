@@ -4,6 +4,7 @@ import os from 'node:os';
 import { LanguageLoader } from './loader.js';
 import { EmbeddingProvider } from './embedding.js';
 import { VectorStore } from './vector-store.js';
+import { DatabaseManager } from './database.js';
 import { CodeDocument, SourceEntry } from './types.js';
 
 export interface IndexResult {
@@ -18,22 +19,63 @@ export async function indexLanguage(
   loader: LanguageLoader,
   vectorStore: VectorStore,
   embedding: EmbeddingProvider,
+  db?: DatabaseManager,
 ): Promise<IndexResult> {
   const meta = loader.loadLanguageMeta(lang) as Record<string, any> | null;
   const sources = meta?.sources as { stdlib?: SourceEntry[] } | undefined;
-  if (!sources?.stdlib?.length) {
-    return { language: lang, filesDiscovered: 0, chunksCreated: 0, indexed: 0 };
+
+  // Collect chunks from .d.ts / local stdlib files
+  let filesDiscovered = 0;
+  let chunks: CodeDocument[] = [];
+  if (sources?.stdlib?.length) {
+    const version = (meta?.version as string) || '';
+    const files = discoverStdlibFiles(sources.stdlib, version);
+    filesDiscovered = files.length;
+    if (files.length > 0) {
+      chunks = chunkFiles(lang, files);
+    }
   }
 
-  const version = (meta?.version as string) || '';
-  const files = discoverStdlibFiles(sources.stdlib, version);
-  if (files.length === 0) {
-    return { language: lang, filesDiscovered: 0, chunksCreated: 0, indexed: 0 };
+  // Enrich .d.ts chunks with curated YAML descriptions and add missing entries
+  if (db) {
+    const yamlEntries = db.getStdlibEntriesByLanguage(lang);
+    const yamlMap = new Map<string, Record<string, unknown>>();
+    for (const entry of yamlEntries) {
+      yamlMap.set(`${entry.module}.${entry.method}`, entry);
+    }
+    for (const chunk of chunks) {
+      const yaml = yamlMap.get(chunk.name);
+      if (!yaml) continue;
+      if (yaml.description && (!chunk.description || chunk.description === `${chunk.name} method`)) {
+        chunk.description = yaml.description as string;
+      }
+      if (yaml.example && !chunk.code) {
+        chunk.code = yaml.example as string;
+      }
+      if (yaml.tags) {
+        const yamlTags = Array.isArray(yaml.tags) ? yaml.tags as string[] : JSON.parse((yaml.tags as string) || '[]');
+        if (yamlTags.length > chunk.tags.length) {
+          chunk.tags = yamlTags;
+        }
+      }
+      yamlMap.delete(chunk.name);
+    }
+    for (const entry of yamlMap.values()) {
+      chunks.push({
+        language: lang,
+        source: 'stdlib',
+        module: entry.module as string,
+        name: `${entry.module}.${entry.method}`,
+        signature: (entry.signature as string) || '',
+        description: (entry.description as string) || '',
+        code: (entry.example as string) || '',
+        tags: Array.isArray(entry.tags) ? entry.tags as string[] : JSON.parse((entry.tags as string) || '[]'),
+      });
+    }
   }
 
-  const chunks = chunkFiles(lang, files);
   if (chunks.length === 0) {
-    return { language: lang, filesDiscovered: files.length, chunksCreated: 0, indexed: 0 };
+    return { language: lang, filesDiscovered: 0, chunksCreated: 0, indexed: 0 };
   }
 
   const texts = chunks.map(c => `${c.name}: ${c.signature}\n${c.description}`);
@@ -53,7 +95,7 @@ export async function indexLanguage(
 
   return {
     language: lang,
-    filesDiscovered: files.length,
+    filesDiscovered,
     chunksCreated: chunks.length,
     indexed,
   };
@@ -172,26 +214,72 @@ export function chunkFiles(lang: string, files: string[]): CodeDocument[] {
   return chunks;
 }
 
+function extractDelimited(text: string, start: number, open: string, close: string): string | null {
+  if (text[start] !== open) return null;
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === open) depth++;
+    else if (text[i] === close) {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+function extractJSDoc(content: string, position: number): string {
+  const before = content.slice(Math.max(0, position - 2000), position);
+  const match = before.match(/\/\*\*([\s\S]*?)\*\/\s*$/);
+  if (!match) return '';
+  return match[1]
+    .replace(/^\s*\* ?/gm, '')
+    .replace(/@param\s+\w+\s*-?\s*/g, '')
+    .replace(/@returns?\s*-?\s*/g, 'Returns ')
+    .replace(/@example[\s\S]*$/m, '')
+    .trim()
+    .split('\n')
+    .filter(line => !line.startsWith('@'))
+    .join(' ')
+    .trim();
+}
+
 function chunkDts(content: string, lang: string, filename: string): CodeDocument[] {
   const chunks: CodeDocument[] = [];
   const moduleName = filename.replace(/\.d\.ts$/, '').replace(/^lib\./, '');
 
-  const interfaceRegex = /(?:export\s+)?interface\s+(\w+)[^{]*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/gs;
+  const interfaceRegex = /(?:export\s+)?interface\s+(\w+)[^{]*\{/gs;
   let match: RegExpExecArray | null;
 
   while ((match = interfaceRegex.exec(content)) !== null) {
     const ifaceName = match[1];
-    const body = match[2];
+    const ifaceStart = match.index + match[0].length;
 
-    const methodRegex = /(\w+)\s*(?:<[^>]*>)?\s*\(([^)]*)\)\s*:\s*([^;]+);/g;
+    const braceBlock = extractDelimited(content, ifaceStart - 1, '{', '}');
+    const body = braceBlock ? braceBlock.slice(1, -1) : '';
+
+    // Match method signatures with balanced parentheses
+    const methodStartRegex = /(\w+)\s*(?:<[^>]*>)?\s*(?=\()/g;
     let methodMatch: RegExpExecArray | null;
-    while ((methodMatch = methodRegex.exec(body)) !== null) {
+    while ((methodMatch = methodStartRegex.exec(body)) !== null) {
       const methodName = methodMatch[1];
       if (methodName === 'constructor' || methodName === 'new') continue;
 
-      const params = methodMatch[2].trim();
-      const returnType = methodMatch[3].trim();
+      const parenStart = methodMatch.index + methodMatch[0].length;
+      const paramsBlock = extractDelimited(body, parenStart, '(', ')');
+      if (!paramsBlock) continue;
+
+      const afterParams = body.slice(parenStart + paramsBlock.length);
+      const returnMatch = afterParams.match(/^\s*:\s*([^;]+);/);
+      if (!returnMatch) continue;
+
+      const params = paramsBlock.slice(1, -1).trim();
+      const returnType = returnMatch[1].trim();
       const signature = `(${params}): ${returnType}`;
+
+      // Extract JSDoc from original content before this method
+      const absPos = ifaceStart + methodMatch.index;
+      const jsdoc = extractJSDoc(content, absPos);
+      const description = jsdoc || `${ifaceName}.${methodName} method`;
 
       chunks.push({
         language: lang,
@@ -199,10 +287,13 @@ function chunkDts(content: string, lang: string, filename: string): CodeDocument
         module: ifaceName,
         name: `${ifaceName}.${methodName}`,
         signature,
-        description: `${ifaceName}.${methodName} method`,
+        description,
         code: `${ifaceName}.${methodName}${signature}`,
         tags: [moduleName, ifaceName, methodName],
       });
+
+      // Advance past the signature to avoid re-matching
+      methodStartRegex.lastIndex = parenStart + paramsBlock.length + returnMatch[0].length;
     }
   }
 

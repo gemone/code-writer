@@ -22,55 +22,56 @@ export function createLangCompareTool(
       required: ['concept', 'languages'],
     },
     handler: async (args: { concept: string; languages: string[]; format?: string }) => {
-      if (vectorStore && embedding) {
-        const queryVector = await embedding.embed(args.concept).catch(() => null);
-        if (queryVector) {
-          const langResults = await Promise.all(
-            args.languages.map(async lang => {
-              const vectorText = await searchWithVector(vectorStore, args.concept, queryVector, {
-                language: lang.toLowerCase(),
-                limit: 5,
-              }, hits => {
-                let text = '';
-                for (const { document: doc } of hits) {
-                  text += `### ${doc.name} (${doc.module})\n`;
-                  if (doc.signature) text += `\`${doc.signature}\`\n\n`;
-                  text += `${doc.description}\n\n`;
-                  if (doc.code) text += `\`\`\`\n${doc.code}\n\`\`\`\n\n`;
-                }
-                return text;
-              });
-              return { lang, vectorText };
-            })
-          );
-
-          if (langResults.some(r => r.vectorText !== null)) {
-            let text = `# Comparing: ${args.concept}\n\n`;
-            for (const { lang, vectorText } of langResults) {
-              text += `## ${lang}\n\n`;
-              text += vectorText || 'No matching content found.\n\n';
-            }
-            return { content: [{ type: 'text' as const, text }] };
-          }
-        }
-      }
-
-      // Fallback to SQLite
+      // SQLite first: curated conventions, patterns, and syntax
       const result = queryEngine.compare(
         args.concept,
         args.languages.map(l => l.toLowerCase()),
       );
 
       let text = `# Comparing: ${args.concept}\n\n`;
+      const hasSQLite = result.languages.some(l => l.sections.length > 0);
+
       for (const lang of result.languages) {
         text += `## ${lang.language}\n\n`;
-        if (lang.sections.length === 0) {
-          text += `No matching content found.\n\n`;
-          continue;
+        if (lang.sections.length > 0) {
+          for (const section of lang.sections) {
+            text += `### ${section.source}\n`;
+            text += `${section.content}\n\n`;
+          }
+        } else {
+          text += 'No matching content found.\n\n';
         }
-        for (const section of lang.sections) {
-          text += `### ${section.source}\n`;
-          text += `${section.content}\n\n`;
+      }
+
+      if (hasSQLite) return { content: [{ type: 'text' as const, text }] };
+
+      // Fallback to vector search only if SQLite found nothing
+      if (vectorStore && embedding) {
+        const queryVector = await embedding.embed(args.concept).catch(() => null);
+        if (queryVector) {
+          const vectorTexts = await Promise.all(
+            args.languages.map(lang =>
+              searchWithVector(vectorStore, args.concept, queryVector, {
+                language: lang.toLowerCase(),
+                limit: 5,
+              }, hits => {
+                let t = '';
+                for (const { document: doc } of hits) {
+                  t += `### ${doc.name} (${doc.module})\n`;
+                  if (doc.signature) t += `\`${doc.signature}\`\n\n`;
+                  t += `${doc.description}\n\n`;
+                  if (doc.code) t += `\`\`\`\n${doc.code}\n\`\`\`\n\n`;
+                }
+                return t;
+              })
+            )
+          );
+          text = `# Comparing: ${args.concept}\n\n`;
+          for (let i = 0; i < args.languages.length; i++) {
+            text += `## ${args.languages[i]}\n\n`;
+            text += vectorTexts[i] || 'No matching content found.\n\n';
+          }
+          return { content: [{ type: 'text' as const, text }] };
         }
       }
 

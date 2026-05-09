@@ -44,6 +44,27 @@ export function createLangRefTool(
         return { content: [{ type: 'text' as const, text }] };
       }
 
+      // Try SQLite first (curated data with proper descriptions)
+      const methods = queryEngine.getMethod(lang, args.module, args.method);
+
+      if (methods.length > 0) {
+        let text = `# ${args.language} - ${args.module}\n\n`;
+        for (const m of methods) {
+          text += `## ${m.method}\n`;
+          if (m.signature) text += `\`${m.signature}\`\n\n`;
+          text += `${m.description}\n\n`;
+          if (depth === 'full' && m.example) {
+            text += `### Example\n\`\`\`\n${m.example}\n\`\`\`\n\n`;
+          }
+          if (m.tags) {
+            const tags = typeof m.tags === 'string' ? JSON.parse(m.tags) : m.tags;
+            text += `Tags: ${tags.join(', ')}\n\n`;
+          }
+        }
+        return { content: [{ type: 'text' as const, text }] };
+      }
+
+      // Fallback to vector search for fuzzy matching
       const searchTerm = args.method ? `${args.module}.${args.method}` : args.module;
       const vectorText = await tryVectorSearch(vectorStore, embedding, searchTerm, {
         language: lang,
@@ -63,27 +84,7 @@ export function createLangRefTool(
         return text;
       });
       if (vectorText) return { content: [{ type: 'text' as const, text: vectorText }] };
-
-      const methods = queryEngine.getMethod(lang, args.module, args.method);
-      if (methods.length === 0) {
-        return { content: [{ type: 'text' as const, text: `No results for ${args.module}${args.method ? '.' + args.method : ''} in ${args.language}.` }] };
-      }
-
-      let text = `# ${args.language} - ${args.module}\n\n`;
-      for (const m of methods) {
-        text += `## ${m.method}\n`;
-        if (m.signature) text += `\`${m.signature}\`\n\n`;
-        text += `${m.description}\n\n`;
-        if (depth === 'full' && m.example) {
-          text += `### Example\n\`\`\`\n${m.example}\n\`\`\`\n\n`;
-        }
-        if (m.tags) {
-          const tags = typeof m.tags === 'string' ? JSON.parse(m.tags) : m.tags;
-          text += `Tags: ${tags.join(', ')}\n\n`;
-        }
-      }
-
-      return { content: [{ type: 'text' as const, text }] };
+      return { content: [{ type: 'text' as const, text: `No results for ${args.module}${args.method ? '.' + args.method : ''} in ${args.language}.` }] };
     },
   };
 }

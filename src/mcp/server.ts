@@ -40,7 +40,7 @@ async function main() {
     for (const lang of loader.getRegisteredLanguages()) {
       if (!vectorStore.isIndexed(lang)) {
         indexing.push(
-          indexLanguage(lang, loader, vectorStore, embedding)
+          indexLanguage(lang, loader, vectorStore, embedding, db)
             .then(result => {
               if (result.indexed > 0) {
                 console.error(`[code-writer] Auto-indexed ${result.language}: ${result.indexed} documents`);
@@ -72,7 +72,7 @@ async function main() {
   const langFetchTool = createLangFetchTool(queryEngine, loader);
   const langAstTool = createLangAstTool();
   const langIndexTool = vectorStore && embedding
-    ? createLangIndexTool(loader, vectorStore, embedding)
+    ? createLangIndexTool(loader, vectorStore, embedding, db)
     : null;
 
   const tools = [

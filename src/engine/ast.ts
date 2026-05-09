@@ -90,7 +90,7 @@ export function parseCode(lang: string, source: string): sg.SgRoot {
 
 export function findPattern(root: sg.SgRoot, pattern: string): MatchResult[] {
   const rootNode = root.root();
-  const nodes = rootNode.findAll(pattern);
+  const nodes = rootNode.findAll({ rule: { pattern } });
   if (!nodes) return [];
   return nodes.map(n => nodeToMatch(n, pattern));
 }

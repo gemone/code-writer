@@ -147,6 +147,10 @@ export class DatabaseManager {
     return this.db.prepare('SELECT * FROM stdlib_entries').all() as Record<string, unknown>[];
   }
 
+  getStdlibEntriesByLanguage(languageId: string): Record<string, unknown>[] {
+    return this.db.prepare('SELECT * FROM stdlib_entries WHERE language_id = ?').all(languageId) as Record<string, unknown>[];
+  }
+
   // --- Syntax ---
 
   insertSyntaxEntry(languageId: string, section: string, topic: string, code: string, description?: string): void {
@@ -219,35 +223,60 @@ export class DatabaseManager {
   // --- Search helpers ---
 
   searchAll(query: string, languageId?: string): Record<string, unknown>[] {
-    const escaped = query.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
-    const q = `%${escaped}%`;
+    const words = query.split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0) return [];
     const results: Record<string, unknown>[] = [];
 
-    const stdlibQuery = languageId
-      ? this.db.prepare("SELECT *, 'stdlib' as source_type FROM stdlib_entries WHERE language_id = ? AND (method LIKE ? OR description LIKE ? OR tags LIKE ?)")
-      : this.db.prepare("SELECT *, 'stdlib' as source_type FROM stdlib_entries WHERE method LIKE ? OR description LIKE ? OR tags LIKE ?");
-    const stdlibRows = languageId ? stdlibQuery.all(languageId, q, q, q) : stdlibQuery.all(q, q, q);
-    results.push(...(stdlibRows as Record<string, unknown>[]));
+    const stdlibFields = ['method', 'module', 'description', 'tags'];
+    results.push(...this.searchTable('stdlib_entries', 'stdlib', stdlibFields, words, languageId));
 
-    const syntaxQuery = languageId
-      ? this.db.prepare("SELECT *, 'syntax' as source_type FROM syntax_entries WHERE language_id = ? AND (topic LIKE ? OR code LIKE ? OR description LIKE ?)")
-      : this.db.prepare("SELECT *, 'syntax' as source_type FROM syntax_entries WHERE topic LIKE ? OR code LIKE ? OR description LIKE ?");
-    const syntaxRows = languageId ? syntaxQuery.all(languageId, q, q, q) : syntaxQuery.all(q, q, q);
-    results.push(...(syntaxRows as Record<string, unknown>[]));
+    const syntaxFields = ['topic', 'code', 'description'];
+    results.push(...this.searchTable('syntax_entries', 'syntax', syntaxFields, words, languageId));
 
-    const convQuery = languageId
-      ? this.db.prepare("SELECT *, 'conventions' as source_type FROM conventions WHERE language_id = ? AND (name LIKE ? OR rule LIKE ?)")
-      : this.db.prepare("SELECT *, 'conventions' as source_type FROM conventions WHERE name LIKE ? OR rule LIKE ?");
-    const convRows = languageId ? convQuery.all(languageId, q, q) : convQuery.all(q, q);
-    results.push(...(convRows as Record<string, unknown>[]));
+    const convFields = ['name', 'rule'];
+    results.push(...this.searchTable('conventions', 'conventions', convFields, words, languageId));
 
-    const patQuery = languageId
-      ? this.db.prepare("SELECT *, 'patterns' as source_type FROM patterns WHERE language_id = ? AND (name LIKE ? OR description LIKE ?)")
-      : this.db.prepare("SELECT *, 'patterns' as source_type FROM patterns WHERE name LIKE ? OR description LIKE ?");
-    const patRows = languageId ? patQuery.all(languageId, q, q) : patQuery.all(q, q);
-    results.push(...(patRows as Record<string, unknown>[]));
+    const patFields = ['name', 'description'];
+    results.push(...this.searchTable('patterns', 'patterns', patFields, words, languageId));
 
     return results;
+  }
+
+  private searchTable(
+    table: string,
+    sourceType: string,
+    fields: string[],
+    words: string[],
+    languageId?: string,
+  ): Record<string, unknown>[] {
+    const wordsLike = words.map(w => {
+      const escaped = w.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+      return `%${escaped}%`;
+    });
+
+    // AND: every word must match at least one field
+    const andConditions = wordsLike.map(() =>
+      `(${fields.map(f => `${f} LIKE ?`).join(' OR ')})`
+    );
+    const andParams = wordsLike.flatMap(like => fields.map(() => like));
+
+    const andWhere = andConditions.join(' AND ');
+    const andSql = languageId
+      ? `SELECT *, '${sourceType}' as source_type FROM ${table} WHERE language_id = ? AND ${andWhere}`
+      : `SELECT *, '${sourceType}' as source_type FROM ${table} WHERE ${andWhere}`;
+    const andStmt = this.db.prepare(andSql);
+    const andResults = (languageId ? andStmt.all(languageId, ...andParams) : andStmt.all(...andParams)) as Record<string, unknown>[];
+    if (andResults.length > 0) return andResults;
+
+    // Fallback OR: any word matches any field
+    const orConditions = wordsLike.map(() => `(${fields.map(f => `${f} LIKE ?`).join(' OR ')})`);
+    const orParams = wordsLike.flatMap(like => fields.map(() => like));
+    const orWhere = orConditions.join(' OR ');
+    const orSql = languageId
+      ? `SELECT *, '${sourceType}' as source_type FROM ${table} WHERE language_id = ? AND ${orWhere}`
+      : `SELECT *, '${sourceType}' as source_type FROM ${table} WHERE ${orWhere}`;
+    const orStmt = this.db.prepare(orSql);
+    return (languageId ? orStmt.all(languageId, ...orParams) : orStmt.all(...orParams)) as Record<string, unknown>[];
   }
 
   // --- Lifecycle ---
