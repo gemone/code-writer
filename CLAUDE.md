@@ -70,5 +70,5 @@ tests/                # Vitest test suite
 
 <!-- code-writer: project-languages -->
 ## Project Languages
-typescript
+typescript, python
 <!-- /code-writer: project-languages -->

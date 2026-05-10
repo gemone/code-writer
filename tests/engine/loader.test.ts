@@ -4,6 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { DatabaseManager } from '../../src/engine/database.js';
 import { LanguageLoader } from '../../src/engine/loader.js';
+import { ensureDataDir, DATA_DIR } from '../../src/engine/constants.js';
 
 describe('LanguageLoader', () => {
   let db: DatabaseManager;
@@ -74,5 +75,27 @@ describe('LanguageLoader', () => {
 
   it('should return data directory', () => {
     expect(loader.getDataDir()).toContain('data');
+  });
+});
+
+describe('LanguageLoader with DATA_DIR', () => {
+  it('defaults to DATA_DIR when no dataDir is provided', async () => {
+    // ensureDataDir copies bundled data to DATA_DIR
+    ensureDataDir();
+
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'loader-default-test-'));
+    const dbPath = path.join(tmpDir, 'test.db');
+    const db = new DatabaseManager(dbPath);
+    const loader = new LanguageLoader(db);
+
+    expect(loader.getDataDir()).toBe(DATA_DIR);
+
+    // Sync should work with DATA_DIR
+    await loader.syncFromYaml();
+    const langs = db.getAllLanguages();
+    expect(langs.length).toBeGreaterThan(0);
+
+    db.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });

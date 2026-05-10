@@ -3,6 +3,7 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import type { QueryEngine } from '../engine/query.js';
 import type { LanguageLoader } from '../engine/loader.js';
+import { DATA_DIR } from '../engine/constants.js';
 
 const TEMPLATE_FILES = ['language.yaml', 'stdlib.yaml', 'syntax.yaml', 'conventions.yaml', 'patterns.yaml'];
 
@@ -23,9 +24,8 @@ export function createLangFetchTool(queryEngine: QueryEngine, loader: LanguageLo
     },
     handler: async (args: { language: string; version?: string; modules?: string[]; force?: boolean; data?: Record<string, unknown> }) => {
       const lang = args.language.toLowerCase();
-      const dataDir = loader.getDataDir();
-      const langDir = path.join(dataDir, lang);
-      const registryPath = path.join(dataDir, 'index.yaml');
+      const langDir = path.join(DATA_DIR, lang);
+      const registryPath = path.join(DATA_DIR, 'index.yaml');
 
       // Phase 2: accept populated data and write files
       if (args.data) {
@@ -52,7 +52,7 @@ function handlePhase1(
     return {
       content: [{
         type: 'text' as const,
-        text: `Language "${lang}" already has stdlib data at data/${lang}/. Use force: true to re-fetch.`,
+        text: `Language "${lang}" already has stdlib data at ~/.code-writer/data/${lang}/. Use force: true to re-fetch.`,
       }],
     };
   }
@@ -90,7 +90,7 @@ function handlePhase1(
     content: [{
       type: 'text' as const,
       text: [
-        `Scaffolded language directory at data/${lang}/.`,
+        `Scaffolded language directory at ~/.code-writer/data/${lang}/.`,
         '',
         `**Next step:** Populate the YAML files with real data. Use these tools to fetch documentation:`,
         '',
@@ -173,7 +173,7 @@ async function handlePhase2(
         `Language "${lang}" data written and synced to database.`,
         '',
         `Files written: ${filesWritten.join(', ')}`,
-        `Registry updated: data/index.yaml`,
+        `Registry updated: ~/.code-writer/data/index.yaml`,
         '',
         `You can now use:`,
         `- \`lang_ref(language: "${lang}")\` for API reference`,

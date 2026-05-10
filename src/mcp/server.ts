@@ -15,8 +15,13 @@ import { createLangCompareTool } from '../tools/lang-compare.js';
 import { createLangFetchTool } from '../tools/lang-fetch.js';
 import { createLangAstTool } from '../tools/lang-ast.js';
 import { createLangIndexTool } from '../tools/lang-index.js';
+import { createLangLspTool } from '../tools/lang-lsp.js';
+import { LspClientManager } from '../engine/lsp-client.js';
+import { ensureDataDir } from '../engine/constants.js';
 
 async function main() {
+  ensureDataDir();
+
   const db = new DatabaseManager();
   const loader = new LanguageLoader(db);
   const queryEngine = new QueryEngine(db);
@@ -27,6 +32,7 @@ async function main() {
   // Initialize vector store and embedding provider
   let vectorStore: VectorStore | null = null;
   let embedding: EmbeddingProvider | null = null;
+  const lspManager = new LspClientManager();
 
   try {
     const embConfig = loadEmbeddingConfig();
@@ -57,6 +63,7 @@ async function main() {
     const shutdown = async () => {
       await Promise.allSettled(indexing);
       await vectorStore?.persist();
+      await lspManager.shutdownAll();
       process.exit(0);
     };
     process.on('SIGTERM', shutdown);
@@ -71,6 +78,7 @@ async function main() {
   const langCompareTool = createLangCompareTool(queryEngine, vectorStore, embedding);
   const langFetchTool = createLangFetchTool(queryEngine, loader);
   const langAstTool = createLangAstTool();
+  const langLspTool = createLangLspTool(lspManager);
   const langIndexTool = vectorStore && embedding
     ? createLangIndexTool(loader, vectorStore, embedding, db)
     : null;
@@ -82,6 +90,7 @@ async function main() {
     langCompareTool,
     langFetchTool,
     langAstTool,
+    langLspTool,
     ...(langIndexTool ? [langIndexTool] : []),
   ];
 

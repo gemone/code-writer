@@ -9,3 +9,5 @@ export { createLangConventionsTool } from './tools/lang-conventions.js';
 export { createLangCompareTool } from './tools/lang-compare.js';
 export { createLangFetchTool } from './tools/lang-fetch.js';
 export { createLangAstTool } from './tools/lang-ast.js';
+export { createLangLspTool } from './tools/lang-lsp.js';
+export { LspClientManager } from './engine/lsp-client.js';

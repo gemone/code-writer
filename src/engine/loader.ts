@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { DatabaseManager } from './database.js';
+import { DATA_DIR } from './constants.js';
 import {
   LanguageRegistrySchema,
   LanguageMetaSchema,
@@ -21,7 +22,7 @@ export class LanguageLoader {
 
   constructor(db: DatabaseManager, dataDir?: string) {
     this.db = db;
-    this.dataDir = dataDir || path.resolve(__dirname, '../../data');
+    this.dataDir = dataDir || DATA_DIR;
   }
 
   syncFromYaml(): void {
