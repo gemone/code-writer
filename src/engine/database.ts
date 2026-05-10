@@ -89,6 +89,81 @@ export class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_syntax_lang ON syntax_entries(language_id);
       CREATE INDEX IF NOT EXISTS idx_conventions_lang ON conventions(language_id);
       CREATE INDEX IF NOT EXISTS idx_patterns_lang ON patterns(language_id);
+
+      CREATE TABLE IF NOT EXISTS dep_registry (
+        id TEXT PRIMARY KEY,
+        library_name TEXT NOT NULL,
+        scope TEXT,
+        resolved_version TEXT NOT NULL,
+        version_range TEXT,
+        language TEXT NOT NULL,
+        package_manager TEXT,
+        description TEXT,
+        source_url TEXT,
+        context7_id TEXT,
+        metadata_json TEXT,
+        fetched_at TEXT NOT NULL DEFAULT (datetime('now')),
+        is_indexed INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS dep_apis (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dep_id TEXT NOT NULL,
+        module TEXT NOT NULL,
+        export_name TEXT NOT NULL,
+        export_kind TEXT NOT NULL DEFAULT 'function',
+        signature TEXT,
+        description TEXT NOT NULL,
+        example TEXT,
+        since_version TEXT,
+        deprecated_version TEXT,
+        tags TEXT,
+        source_type TEXT NOT NULL DEFAULT 'context7',
+        FOREIGN KEY (dep_id) REFERENCES dep_registry(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS dep_patterns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dep_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        category TEXT,
+        description TEXT NOT NULL,
+        code_example TEXT NOT NULL,
+        context TEXT,
+        related_patterns TEXT,
+        tags TEXT,
+        FOREIGN KEY (dep_id) REFERENCES dep_registry(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS dep_considerations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dep_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT NOT NULL,
+        affected_version_range TEXT,
+        fix_suggestion TEXT,
+        severity TEXT,
+        source_url TEXT,
+        FOREIGN KEY (dep_id) REFERENCES dep_registry(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS dep_version_cache (
+        library_name TEXT NOT NULL,
+        language TEXT NOT NULL,
+        version_range TEXT NOT NULL,
+        resolved_version TEXT NOT NULL,
+        dep_id TEXT NOT NULL,
+        cached_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (library_name, language, version_range)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_dep_registry_name ON dep_registry(library_name);
+      CREATE INDEX IF NOT EXISTS idx_dep_registry_lang ON dep_registry(language);
+      CREATE INDEX IF NOT EXISTS idx_dep_apis_dep ON dep_apis(dep_id);
+      CREATE INDEX IF NOT EXISTS idx_dep_patterns_dep ON dep_patterns(dep_id);
+      CREATE INDEX IF NOT EXISTS idx_dep_considerations_dep ON dep_considerations(dep_id);
+      CREATE INDEX IF NOT EXISTS idx_dep_apis_search ON dep_apis(export_name, module);
     `);
   }
 
@@ -249,34 +324,278 @@ export class DatabaseManager {
     words: string[],
     languageId?: string,
   ): Record<string, unknown>[] {
+    return this.searchGeneric({
+      table,
+      sourceType,
+      fields,
+      words,
+      extraWhere: languageId ? 'AND language_id = ?' : '',
+      extraParams: languageId ? [languageId] : [],
+    });
+  }
+
+  private searchDepTable(
+    table: string,
+    sourceType: string,
+    fields: string[],
+    words: string[],
+    language?: string,
+    libraryName?: string,
+  ): Record<string, unknown>[] {
+    const extraWhere: string[] = [];
+    const extraParams: unknown[] = [];
+    if (language) { extraWhere.push('dr.language = ?'); extraParams.push(language); }
+    if (libraryName) { extraWhere.push('dr.library_name = ?'); extraParams.push(libraryName); }
+
+    return this.searchGeneric({
+      table,
+      sourceType,
+      fields,
+      words,
+      alias: 't',
+      join: 'JOIN dep_registry dr ON t.dep_id = dr.id',
+      extraColumns: ', dr.library_name, dr.resolved_version, dr.language',
+      extraWhere: extraWhere.length > 0 ? `AND ${extraWhere.join(' AND ')}` : '',
+      extraParams,
+    });
+  }
+
+  private searchGeneric(opts: {
+    table: string;
+    sourceType: string;
+    fields: string[];
+    words: string[];
+    alias?: string;
+    join?: string;
+    extraColumns?: string;
+    extraWhere?: string;
+    extraParams?: unknown[];
+  }): Record<string, unknown>[] {
+    const { table, sourceType, fields, words, alias, join, extraColumns = '', extraWhere = '', extraParams = [] } = opts;
+    const prefix = alias ? `${alias}.` : '';
+
     const wordsLike = words.map(w => {
       const escaped = w.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
       return `%${escaped}%`;
     });
 
+    const fromClause = alias && join ? `${table} ${alias} ${join}` : table;
+    const selectCols = alias ? `${alias}.*, '${sourceType}' as source_type${extraColumns}` : `*, '${sourceType}' as source_type${extraColumns}`;
+
     // AND: every word must match at least one field
     const andConditions = wordsLike.map(() =>
-      `(${fields.map(f => `${f} LIKE ?`).join(' OR ')})`
+      `(${fields.map(f => `${prefix}${f} LIKE ?`).join(' OR ')})`
     );
     const andParams = wordsLike.flatMap(like => fields.map(() => like));
-
     const andWhere = andConditions.join(' AND ');
-    const andSql = languageId
-      ? `SELECT *, '${sourceType}' as source_type FROM ${table} WHERE language_id = ? AND ${andWhere}`
-      : `SELECT *, '${sourceType}' as source_type FROM ${table} WHERE ${andWhere}`;
-    const andStmt = this.db.prepare(andSql);
-    const andResults = (languageId ? andStmt.all(languageId, ...andParams) : andStmt.all(...andParams)) as Record<string, unknown>[];
+
+    const andSql = `SELECT ${selectCols} FROM ${fromClause} WHERE ${andWhere} ${extraWhere}`;
+    const andResults = this.db.prepare(andSql).all(...andParams, ...extraParams) as Record<string, unknown>[];
     if (andResults.length > 0) return andResults;
 
     // Fallback OR: any word matches any field
-    const orConditions = wordsLike.map(() => `(${fields.map(f => `${f} LIKE ?`).join(' OR ')})`);
+    const orConditions = wordsLike.map(() =>
+      `(${fields.map(f => `${prefix}${f} LIKE ?`).join(' OR ')})`
+    );
     const orParams = wordsLike.flatMap(like => fields.map(() => like));
     const orWhere = orConditions.join(' OR ');
-    const orSql = languageId
-      ? `SELECT *, '${sourceType}' as source_type FROM ${table} WHERE language_id = ? AND ${orWhere}`
-      : `SELECT *, '${sourceType}' as source_type FROM ${table} WHERE ${orWhere}`;
-    const orStmt = this.db.prepare(orSql);
-    return (languageId ? orStmt.all(languageId, ...orParams) : orStmt.all(...orParams)) as Record<string, unknown>[];
+
+    const orSql = `SELECT ${selectCols} FROM ${fromClause} WHERE ${orWhere} ${extraWhere}`;
+    return this.db.prepare(orSql).all(...orParams, ...extraParams) as Record<string, unknown>[];
+  }
+
+  // --- Dependencies: Insert ---
+
+  insertDepRegistry(params: {
+    id: string; libraryName: string; scope?: string; resolvedVersion: string;
+    versionRange?: string; language: string; packageManager?: string;
+    description?: string; sourceUrl?: string; context7Id?: string;
+    metadata?: Record<string, unknown>;
+  }): void {
+    this.db.prepare(
+      `INSERT OR REPLACE INTO dep_registry
+        (id, library_name, scope, resolved_version, version_range, language,
+         package_manager, description, source_url, context7_id, metadata_json, fetched_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).run(params.id, params.libraryName, params.scope || null,
+      params.resolvedVersion, params.versionRange || null, params.language,
+      params.packageManager || null, params.description || null,
+      params.sourceUrl || null, params.context7Id || null,
+      params.metadata ? JSON.stringify(params.metadata) : null);
+  }
+
+  insertDepApi(params: {
+    depId: string; module: string; exportName: string; exportKind?: string;
+    signature?: string; description: string; example?: string;
+    sinceVersion?: string; deprecatedVersion?: string;
+    tags?: string[]; sourceType?: string;
+  }): void {
+    this.db.prepare(
+      `INSERT INTO dep_apis
+        (dep_id, module, export_name, export_kind, signature, description,
+         example, since_version, deprecated_version, tags, source_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(params.depId, params.module, params.exportName,
+      params.exportKind || 'function', params.signature || null,
+      params.description, params.example || null, params.sinceVersion || null,
+      params.deprecatedVersion || null, params.tags ? JSON.stringify(params.tags) : null,
+      params.sourceType || 'context7');
+  }
+
+  insertDepPattern(params: {
+    depId: string; name: string; category?: string; description: string;
+    codeExample: string; context?: string; relatedPatterns?: string[];
+    tags?: string[];
+  }): void {
+    this.db.prepare(
+      `INSERT INTO dep_patterns
+        (dep_id, name, category, description, code_example, context, related_patterns, tags)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(params.depId, params.name, params.category || null,
+      params.description, params.codeExample, params.context || null,
+      params.relatedPatterns ? JSON.stringify(params.relatedPatterns) : null,
+      params.tags ? JSON.stringify(params.tags) : null);
+  }
+
+  insertDepConsideration(params: {
+    depId: string; title: string; category: string; description: string;
+    affectedVersionRange?: string; fixSuggestion?: string;
+    severity?: string; sourceUrl?: string;
+  }): void {
+    this.db.prepare(
+      `INSERT INTO dep_considerations
+        (dep_id, title, category, description, affected_version_range,
+         fix_suggestion, severity, source_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(params.depId, params.title, params.category, params.description,
+      params.affectedVersionRange || null, params.fixSuggestion || null,
+      params.severity || null, params.sourceUrl || null);
+  }
+
+  insertDepVersionCache(params: {
+    libraryName: string; language: string; versionRange: string;
+    resolvedVersion: string; depId: string;
+  }): void {
+    this.db.prepare(
+      `INSERT OR REPLACE INTO dep_version_cache
+        (library_name, language, version_range, resolved_version, dep_id, cached_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))`
+    ).run(params.libraryName, params.language, params.versionRange,
+      params.resolvedVersion, params.depId);
+  }
+
+  // --- Dependencies: Query ---
+
+  getDepRegistry(id: string): Record<string, unknown> | undefined {
+    return this.db.prepare('SELECT * FROM dep_registry WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  }
+
+  getDepRegistryByName(libraryName: string, language?: string): Record<string, unknown>[] {
+    if (language) {
+      return this.db.prepare('SELECT * FROM dep_registry WHERE library_name = ? AND language = ?').all(libraryName, language) as Record<string, unknown>[];
+    }
+    return this.db.prepare('SELECT * FROM dep_registry WHERE library_name = ?').all(libraryName) as Record<string, unknown>[];
+  }
+
+  getDepRegistriesByNames(names: string[], language?: string): Set<string> {
+    if (names.length === 0) return new Set();
+    const placeholders = names.map(() => '?').join(',');
+    const sql = language
+      ? `SELECT DISTINCT library_name FROM dep_registry WHERE library_name IN (${placeholders}) AND language = ?`
+      : `SELECT DISTINCT library_name FROM dep_registry WHERE library_name IN (${placeholders})`;
+    const params = language ? [...names, language] : names;
+    const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
+    return new Set(rows.map(r => r.library_name as string));
+  }
+
+  findDepRegistry(libraryName: string, versionRange: string, language: string): Record<string, unknown> | undefined {
+    return this.db.prepare(
+      'SELECT * FROM dep_registry WHERE library_name = ? AND version_range = ? AND language = ?'
+    ).get(libraryName, versionRange, language) as Record<string, unknown> | undefined;
+  }
+
+  getDepApis(depId: string, module?: string, exportName?: string): Record<string, unknown>[] {
+    if (module && exportName) {
+      return this.db.prepare('SELECT * FROM dep_apis WHERE dep_id = ? AND module = ? AND export_name = ?').all(depId, module, exportName) as Record<string, unknown>[];
+    }
+    if (module) {
+      return this.db.prepare('SELECT * FROM dep_apis WHERE dep_id = ? AND module = ?').all(depId, module) as Record<string, unknown>[];
+    }
+    return this.db.prepare('SELECT * FROM dep_apis WHERE dep_id = ?').all(depId) as Record<string, unknown>[];
+  }
+
+  getDepPatterns(depId: string, category?: string): Record<string, unknown>[] {
+    if (category) {
+      return this.db.prepare('SELECT * FROM dep_patterns WHERE dep_id = ? AND category = ?').all(depId, category) as Record<string, unknown>[];
+    }
+    return this.db.prepare('SELECT * FROM dep_patterns WHERE dep_id = ?').all(depId) as Record<string, unknown>[];
+  }
+
+  getDepConsiderations(depId: string, category?: string, severity?: string): Record<string, unknown>[] {
+    if (category && severity) {
+      return this.db.prepare('SELECT * FROM dep_considerations WHERE dep_id = ? AND category = ? AND severity = ?').all(depId, category, severity) as Record<string, unknown>[];
+    }
+    if (category) {
+      return this.db.prepare('SELECT * FROM dep_considerations WHERE dep_id = ? AND category = ?').all(depId, category) as Record<string, unknown>[];
+    }
+    if (severity) {
+      return this.db.prepare('SELECT * FROM dep_considerations WHERE dep_id = ? AND severity = ?').all(depId, severity) as Record<string, unknown>[];
+    }
+    return this.db.prepare('SELECT * FROM dep_considerations WHERE dep_id = ?').all(depId) as Record<string, unknown>[];
+  }
+
+  findCachedDep(libraryName: string, language: string, versionRange: string): Record<string, unknown> | undefined {
+    return this.db.prepare(
+      'SELECT * FROM dep_version_cache WHERE library_name = ? AND language = ? AND version_range = ?'
+    ).get(libraryName, language, versionRange) as Record<string, unknown> | undefined;
+  }
+
+  // --- Dependencies: Update/Delete ---
+
+  updateDepIndexed(depId: string, indexed: boolean): void {
+    this.db.prepare('UPDATE dep_registry SET is_indexed = ? WHERE id = ?').run(indexed ? 1 : 0, depId);
+  }
+
+  deleteDepData(depId: string): void {
+    this.runInTransaction(() => {
+      this.db.prepare('DELETE FROM dep_apis WHERE dep_id = ?').run(depId);
+      this.db.prepare('DELETE FROM dep_patterns WHERE dep_id = ?').run(depId);
+      this.db.prepare('DELETE FROM dep_considerations WHERE dep_id = ?').run(depId);
+      this.db.prepare('DELETE FROM dep_version_cache WHERE dep_id = ?').run(depId);
+      this.db.prepare('DELETE FROM dep_registry WHERE id = ?').run(depId);
+    });
+  }
+
+  // --- Dependencies: Search ---
+
+  searchDeps(query: string, language?: string, libraryName?: string): Record<string, unknown>[] {
+    const words = query.split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0) return [];
+    const results: Record<string, unknown>[] = [];
+
+    // Search dep_apis
+    const apiFields = ['export_name', 'module', 'description', 'tags'];
+    const apiResults = this.searchDepTable('dep_apis', 'apis', apiFields, words, language, libraryName);
+    results.push(...apiResults);
+
+    // Search dep_patterns
+    const patFields = ['name', 'description'];
+    const patResults = this.searchDepTable('dep_patterns', 'patterns', patFields, words, language, libraryName);
+    results.push(...patResults);
+
+    // Search dep_considerations
+    const consFields = ['title', 'description'];
+    const consResults = this.searchDepTable('dep_considerations', 'considerations', consFields, words, language, libraryName);
+    results.push(...consResults);
+
+    return results;
+  }
+
+  // --- Transaction helper ---
+
+  runInTransaction<T>(fn: () => T): T {
+    const t = this.db.transaction(fn);
+    return t();
   }
 
   // --- Lifecycle ---

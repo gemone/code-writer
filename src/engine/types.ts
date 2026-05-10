@@ -437,3 +437,136 @@ export interface CodeDocument {
 export interface IndexedDocument extends CodeDocument {
   embedding: number[];
 }
+
+// --- Dependency Types ---
+
+export const DepRegistrySchema = z.object({
+  libraryName: z.string(),
+  scope: z.string().optional(),
+  resolvedVersion: z.string(),
+  versionRange: z.string().optional(),
+  language: z.string(),
+  packageManager: z.string().optional(),
+  description: z.string().optional(),
+  sourceUrl: z.string().optional(),
+  context7Id: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+export type DepRegistry = z.infer<typeof DepRegistrySchema>;
+
+export const DepApiSchema = z.object({
+  module: z.string(),
+  exportName: z.string(),
+  exportKind: z.enum(['function', 'class', 'variable', 'type', 'interface']).default('function'),
+  signature: z.string().optional(),
+  description: z.string(),
+  example: z.string().optional(),
+  sinceVersion: z.string().optional(),
+  deprecatedVersion: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  sourceType: z.enum(['context7', 'manual', 'generated']).default('context7'),
+});
+export type DepApi = z.infer<typeof DepApiSchema>;
+
+export const DepPatternSchema = z.object({
+  name: z.string(),
+  category: z.enum(['setup', 'usage', 'migration', 'testing', 'advanced']).optional(),
+  description: z.string(),
+  codeExample: z.string(),
+  context: z.string().optional(),
+  relatedPatterns: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+});
+export type DepPattern = z.infer<typeof DepPatternSchema>;
+
+export const DepConsiderationSchema = z.object({
+  title: z.string(),
+  category: z.enum(['breaking', 'deprecation', 'performance', 'security', 'migration', 'tip']),
+  description: z.string(),
+  affectedVersionRange: z.string().optional(),
+  fixSuggestion: z.string().optional(),
+  severity: z.enum(['critical', 'warning', 'info']).optional(),
+  sourceUrl: z.string().optional(),
+});
+export type DepConsideration = z.infer<typeof DepConsiderationSchema>;
+
+export interface DepFetchData {
+  registry?: Partial<DepRegistry>;
+  apis?: DepApi[];
+  patterns?: DepPattern[];
+  considerations?: DepConsideration[];
+}
+
+export interface DepSearchOptions {
+  language?: string;
+  libraryName?: string;
+  category?: 'apis' | 'patterns' | 'considerations' | 'all';
+  limit?: number;
+}
+
+export interface DepSearchResult {
+  score: number;
+  source: string;
+  libraryName: string;
+  version: string;
+  section: string;
+  name: string;
+  snippet: string;
+}
+
+export interface DepDocument {
+  library: string;
+  version: string;
+  language: string;
+  source: string;
+  module: string;
+  name: string;
+  signature: string;
+  description: string;
+  code: string;
+  tags: string[];
+}
+
+export interface DepIndexedDocument extends DepDocument {
+  embedding: number[];
+}
+
+export interface DetectedDependency {
+  name: string;
+  version: string;
+  language: string;
+  packageManager: string;
+  scope?: string;
+}
+
+export interface ProjectDependencies {
+  language: string;
+  packageManager: string;
+  manifestPath: string;
+  dependencies: DetectedDependency[];
+}
+
+export interface DepRegistryRecord {
+  id: string;
+  library_name: string;
+  scope: string | null;
+  resolved_version: string;
+  version_range: string | null;
+  language: string;
+  package_manager: string | null;
+  description: string | null;
+  source_url: string | null;
+  context7_id: string | null;
+  metadata_json: string | null;
+  fetched_at: string;
+  is_indexed: number;
+}
+
+export interface DepVersionCacheRecord {
+  library_name: string;
+  language: string;
+  version_range: string;
+  resolved_version: string;
+  dep_id: string;
+  cached_at: string;
+}

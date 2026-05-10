@@ -1,6 +1,7 @@
 export { DatabaseManager } from './engine/database.js';
 export { LanguageLoader } from './engine/loader.js';
 export { QueryEngine } from './engine/query.js';
+export { DepQueryEngine } from './engine/dep-query.js';
 export { ProjectMemory } from './engine/project-memory.js';
 export * from './engine/types.js';
 export { createLangRefTool } from './tools/lang-ref.js';
@@ -10,4 +11,7 @@ export { createLangCompareTool } from './tools/lang-compare.js';
 export { createLangFetchTool } from './tools/lang-fetch.js';
 export { createLangAstTool } from './tools/lang-ast.js';
 export { createLangLspTool } from './tools/lang-lsp.js';
+export { createDepFetchTool } from './tools/dep-fetch.js';
+export { createDepExploreTool } from './tools/dep-explore.js';
+export { createDepSearchTool } from './tools/dep-search.js';
 export { LspClientManager } from './engine/lsp-client.js';

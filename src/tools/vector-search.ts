@@ -13,7 +13,13 @@ export interface VectorDocument {
   tags: string[];
 }
 
+export interface DepVectorDocument extends VectorDocument {
+  library: string;
+  version: string;
+}
+
 export type SearchHit = { document: VectorDocument; score: number };
+export type DepSearchHit = { document: DepVectorDocument; score: number };
 
 export async function tryVectorSearch(
   vectorStore: VectorStore | null,
@@ -64,5 +70,55 @@ export async function searchWithVector(
   } catch (error) {
     console.error('[code-writer] Vector search failed:', error instanceof Error ? error.message : error);
     return null;
+  }
+}
+
+export async function tryDepVectorSearch(
+  vectorStore: VectorStore | null,
+  embedding: EmbeddingProvider | null,
+  depKey: string,
+  query: string,
+  options: {
+    language?: string;
+    library?: string;
+    limit?: number;
+    similarity?: number;
+  },
+): Promise<DepSearchHit[]> {
+  if (!vectorStore || !embedding) return [];
+  try {
+    const queryVector = await embedding.embed(query).catch(() => null);
+    if (!queryVector) return [];
+    return depSearchWithVector(vectorStore, depKey, query, queryVector, options);
+  } catch {
+    return [];
+  }
+}
+
+export async function depSearchWithVector(
+  vectorStore: VectorStore,
+  depKey: string,
+  query: string,
+  queryVector: number[],
+  options: {
+    language?: string;
+    library?: string;
+    limit?: number;
+    similarity?: number;
+  },
+): Promise<DepSearchHit[]> {
+  try {
+    const results = await vectorStore.depHybridSearch(depKey, query, queryVector, {
+      language: options.language,
+      library: options.library,
+      limit: options.limit ?? 10,
+      similarity: options.similarity ?? 0.6,
+    });
+    return results.hits.map(h => ({
+      document: h.document as DepVectorDocument,
+      score: h.score,
+    }));
+  } catch {
+    return [];
   }
 }

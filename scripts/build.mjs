@@ -35,6 +35,11 @@ await Promise.all([
     entryPoints: ['src/hooks/api-detector.ts'],
     outfile: 'dist/hooks/api-detector.cjs',
   }),
+  build({
+    ...shared,
+    entryPoints: ['src/hooks/dep-detector.ts'],
+    outfile: 'dist/hooks/dep-detector.cjs',
+  }),
 ]);
 
 console.log('Build complete.');

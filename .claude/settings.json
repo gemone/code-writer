@@ -28,6 +28,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node dist/hooks/dep-detector.cjs",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
             "command": "node dist/hooks/conventions-lint.cjs",
             "timeout": 5000
           }

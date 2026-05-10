@@ -1,0 +1,22 @@
+# Embedding prompt templates for dependency data.
+# Used to construct the text that gets embedded for vector search.
+# Each platform can customize how dep data is represented for optimal retrieval.
+
+templates:
+  # Default template (used by all platforms unless overridden)
+  default:
+    api: "{{name}} ({{module}}): {{signature}}\n{{description}}"
+    pattern: "{{name}} [{{category}}]: {{description}}\n{{codeExample}}"
+    consideration: "[{{severity}}] {{title}}: {{description}}\nFix: {{fixSuggestion}}"
+
+  # Claude-optimized templates - richer context for semantic understanding
+  claude:
+    api: "API: {{module}}.{{name}} — {{signature}}\nPurpose: {{description}}\nUsage: {{example}}"
+    pattern: "Pattern: {{name}} ({{category}}) — {{description}}\nCode: {{codeExample}}\nContext: {{context}}"
+    consideration: "{{severity | upcase}}: {{title}} — {{description}}\nAffected: {{affectedVersionRange}}\nFix: {{fixSuggestion}}"
+
+  # OpenCode-optimized templates - concise for efficient token usage
+  opencode:
+    api: "{{module}}.{{name}} {{signature}} | {{description}}"
+    pattern: "{{name}} [{{category}}] {{description}} | {{codeExample}}"
+    consideration: "{{severity}} {{title}}: {{description}} | {{fixSuggestion}}"

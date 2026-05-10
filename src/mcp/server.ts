@@ -17,6 +17,10 @@ import { createLangAstTool } from '../tools/lang-ast.js';
 import { createLangIndexTool } from '../tools/lang-index.js';
 import { createLangLspTool } from '../tools/lang-lsp.js';
 import { LspClientManager } from '../engine/lsp-client.js';
+import { DepQueryEngine } from '../engine/dep-query.js';
+import { createDepFetchTool } from '../tools/dep-fetch.js';
+import { createDepExploreTool } from '../tools/dep-explore.js';
+import { createDepSearchTool } from '../tools/dep-search.js';
 import { ensureDataDir } from '../engine/constants.js';
 
 async function main() {
@@ -83,6 +87,11 @@ async function main() {
     ? createLangIndexTool(loader, vectorStore, embedding, db)
     : null;
 
+  const depQueryEngine = new DepQueryEngine(db);
+  const depFetchTool = createDepFetchTool(db, vectorStore, embedding);
+  const depExploreTool = createDepExploreTool(db, depQueryEngine);
+  const depSearchTool = createDepSearchTool(depQueryEngine, vectorStore, embedding);
+
   const tools = [
     langRefTool,
     langSearchTool,
@@ -91,6 +100,9 @@ async function main() {
     langFetchTool,
     langAstTool,
     langLspTool,
+    depFetchTool,
+    depExploreTool,
+    depSearchTool,
     ...(langIndexTool ? [langIndexTool] : []),
   ];
 
