@@ -1,7 +1,8 @@
 import sg from '@ast-grep/napi';
+import { createRequire } from 'node:module';
 
-// Register dynamic languages on module load
 try {
+  const require = createRequire(import.meta.url);
   sg.registerDynamicLanguage({
     python: require('@ast-grep/lang-python'),
     rust: require('@ast-grep/lang-rust'),
@@ -104,20 +105,18 @@ export function findAllKind(root: sg.SgRoot, kindName: string): MatchResult[] {
 
 export function replacePattern(root: sg.SgRoot, pattern: string, replacement: string): string {
   const rootNode = root.root();
-  const nodes = rootNode.findAll(pattern);
+  const nodes = rootNode.findAll({ rule: { pattern } });
   if (!nodes || nodes.length === 0) return rootNode.text();
 
-  // Build replacement by extracting metavariables
+  const varNames = [...new Set(replacement.match(/\$[A-Z_]+/g) || [])];
   const edits: sg.Edit[] = [];
   for (const node of nodes) {
-    // Extract all metavariables from the match
     let replaced = replacement;
-    const varNames = replacement.match(/\$[A-Z_]+/g) || [];
     for (const varName of varNames) {
-      const name = varName.slice(1); // remove $
+      const name = varName.slice(1);
       const matched = node.getMatch(name);
       if (matched) {
-        replaced = replaced.replace(varName, matched.text());
+        replaced = replaced.replaceAll(varName, matched.text());
       }
     }
     edits.push(node.replace(replaced));
@@ -203,6 +202,66 @@ export function extractImports(lang: string, source: string): ImportInfo[] {
         raw: text,
       });
     }
+  } else if (resolved === 'go') {
+    const importNodes = rootNode.findAll({ rule: { kind: 'import_declaration' } }) || [];
+    for (const node of importNodes) {
+      const text = node.text();
+      const pathMatch = text.match(/"([^"]+)"/);
+      if (!pathMatch) continue;
+      imports.push({
+        module: pathMatch[1],
+        names: [],
+        line: node.range().start.line,
+        raw: text,
+      });
+    }
+  } else if (resolved === 'java') {
+    const importNodes = rootNode.findAll({ rule: { kind: 'import_declaration' } }) || [];
+    for (const node of importNodes) {
+      const text = node.text();
+      const match = text.match(/import\s+(?:static\s+)?([\w.*]+);/);
+      if (!match) continue;
+      imports.push({
+        module: match[1],
+        names: [],
+        line: node.range().start.line,
+        raw: text,
+      });
+    }
+  } else if (resolved === 'rust') {
+    const useNodes = rootNode.findAll({ rule: { kind: 'use_declaration' } }) || [];
+    for (const node of useNodes) {
+      const text = node.text();
+      const match = text.match(/use\s+([^;]+)/);
+      if (!match) continue;
+      imports.push({
+        module: match[1].trim(),
+        names: [],
+        line: node.range().start.line,
+        raw: text,
+      });
+    }
+  } else if (resolved === 'ruby') {
+    const lines = source.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const match = lines[i].match(/^(require|require_relative)\s+['"]([^'"]+)['"]/);
+      if (match) {
+        imports.push({ module: match[2], names: [], line: i, raw: lines[i] });
+      }
+    }
+  } else if (resolved === 'c' || resolved === 'cpp') {
+    const includeNodes = rootNode.findAll({ rule: { kind: 'preproc_include' } }) || [];
+    for (const node of includeNodes) {
+      const text = node.text();
+      const match = text.match(/#include\s+[<"]([^>"]+)[>"]/);
+      if (!match) continue;
+      imports.push({
+        module: match[1],
+        names: [],
+        line: node.range().start.line,
+        raw: text,
+      });
+    }
   }
 
   return imports;
@@ -221,7 +280,7 @@ export function lintCode(lang: string, source: string, rules: AstRule[]): LintRe
   for (const rule of rules) {
     let nodes: sg.SgNode[] = [];
     if (rule.kind === 'pattern') {
-      nodes = rootNode.findAll(rule.value) || [];
+      nodes = rootNode.findAll({ rule: { pattern: rule.value } }) || [];
     } else if (rule.kind === 'kind') {
       nodes = rootNode.findAll({ rule: { kind: rule.value } }) || [];
     }
@@ -298,6 +357,24 @@ export function extractElements(lang: string, source: string, target: string): E
       interfaces: 'interface_declaration',
       imports: 'import_declaration',
     },
+    ruby: {
+      functions: 'method',
+      classes: 'class',
+      variables: 'assignment',
+    },
+    c: {
+      functions: 'function_definition',
+      types: 'struct_specifier',
+    },
+    cpp: {
+      functions: 'function_definition',
+      classes: 'class_specifier',
+      types: 'type_identifier',
+    },
+    bash: {
+      functions: 'function_definition',
+      variables: 'variable_assignment',
+    },
   };
 
   const langMap = kindMap[resolved] || {};
@@ -347,7 +424,7 @@ function nodeToMatch(node: sg.SgNode, pattern?: string): MatchResult {
 // Helper to extract metavariable matches from a node
 export function getMetavariables(node: sg.SgNode, pattern: string): Record<string, string> {
   const vars: Record<string, string> = {};
-  const varNames = pattern.match(/\$([A-Z_]+)/g) || [];
+  const varNames = [...new Set(pattern.match(/\$([A-Z_]+)/g) || [])];
   for (const varName of varNames) {
     const name = varName.slice(1);
     const matched = node.getMatch(name);

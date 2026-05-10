@@ -2,8 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { LanguageRegistrySchema } from '../engine/types.js';
+import { DATA_DIR } from '../engine/constants.js';
+import { EXT_TO_LANG } from '../shared/lang-map.js';
 
-const dataDir = path.resolve(__dirname, '../../data');
+const dataDir = DATA_DIR;
 
 function loadLanguageHints(): Map<string, { name: string; quickReference: Record<string, string> }> {
   const hints = new Map<string, { name: string; quickReference: Record<string, string> }>();
@@ -44,17 +46,9 @@ function detectLanguage(prompt: string, hints: Map<string, { name: string; quick
   }
 
   // Check for file extensions
-  const extMatch = lower.match(/\.(ts|tsx|js|jsx|py|pyi|rs|go|java|rb|c|cpp|zig)/);
+  const extMatch = lower.match(/\.\w+/);
   if (extMatch) {
-    const extMap: Record<string, string> = {
-      '.ts': 'typescript', '.tsx': 'typescript',
-      '.js': 'javascript', '.jsx': 'javascript',
-      '.py': 'python', '.pyi': 'python',
-      '.rs': 'rust', '.go': 'go',
-      '.java': 'java', '.rb': 'ruby',
-      '.c': 'c', '.cpp': 'cpp', '.zig': 'zig',
-    };
-    return extMap[extMatch[0]] || null;
+    return EXT_TO_LANG[extMatch[0]] || null;
   }
 
   return null;
